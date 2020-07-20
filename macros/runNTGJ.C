@@ -8,8 +8,9 @@ root=root; exec $root -l -b -q "$0($(join_by \",\" \"$*\" | \
 #include <TROOT.h>
 #include <TSystem.h>
 
-void runNTGJ(const char *config_filename = "config/lhc16c2_1run.yaml",
-             const char *run_mode = "test")
+void runNTGJ(const char *config_filename = "config/18q.yaml",
+             const char *run_mode = "test",
+             const char *local_file_list = "pbpb-filelist-18q.txt")
 {
     gROOT->ProcessLine(".include $ROOTSYS/include");
     gROOT->ProcessLine(".include $ALICE_ROOT/include");
@@ -80,7 +81,7 @@ void runNTGJ(const char *config_filename = "config/lhc16c2_1run.yaml",
 
     if (package_list.GetSize() == 0) {
         package_list.Add((TObject *)(new TObjString(
-            "fastjet::v3.2.1_1.024-alice1-4")));
+            "fastjet::v3.2.1_1.024-alice3-2")));
         // The grid ROOT packages tend to lack a GCC 4.9.x =
         // CXXABI_1.3.8 dependency (see also
         // https://gcc.gnu.org/onlinedocs/libstdc++/manual/abi.html),
@@ -90,7 +91,7 @@ void runNTGJ(const char *config_filename = "config/lhc16c2_1run.yaml",
         //   not found (required by root)
         //   Output file AnalysisResults.root not found. Job FAILED !
         package_list.Add((TObject *)(new TObjString(
-            "GCC-Toolchain::v4.9.3-alice3-1")));
+            "GCC-Toolchain::v7.3.0-alice2-7")));
     }
 
     for (Int_t i = 0; i < package_list.GetSize(); i++) {
@@ -112,7 +113,7 @@ void runNTGJ(const char *config_filename = "config/lhc16c2_1run.yaml",
             gROOT->ProcessLine(".include " + include);
         }
     }
- 
+
     // Load base root libraries
     gSystem->Load("libTree");
     gSystem->Load("libGeom");
@@ -140,7 +141,7 @@ void runNTGJ(const char *config_filename = "config/lhc16c2_1run.yaml",
     AliAnalysisManager *mgr = new AliAnalysisManager();
 
     gROOT->ProcessLine(".x $ALICE_ROOT/ANALYSIS/macros/train/"
-                       "AddESDHandler.C");
+                       "AddAODHandler.C");
     gROOT->ProcessLine(".x $ALICE_ROOT/ANALYSIS/macros/train/"
                        "AddMCHandler.C");
 
@@ -176,7 +177,7 @@ void runNTGJ(const char *config_filename = "config/lhc16c2_1run.yaml",
     fp = fopen(config_filename, "r");
 
     // Default values
-    TString emcal_correction_filename = "emcal_correction.yaml";
+    TString emcal_correction_filename = "";
     TString emcal_geometry_filename = "";
     TString emcal_local2master_filename = "";
     bool mult_selection = true;
@@ -185,18 +186,25 @@ void runNTGJ(const char *config_filename = "config/lhc16c2_1run.yaml",
     bool physics_selection_pileup_cut = true;
     bool force_ue_subtraction = false;
     // 1e+309 = INFINITY (for IEEE 754 double)
-    TString skim_cluster_min_e = "-1e+309";
-    TString skim_track_min_pt = "-1e+309";
-    TString skim_muon_track_min_pt = "-1e+309";
-    TString skim_jet_min_pt_1 = "-1e+309";
-    TString skim_jet_min_pt_2 = "-1e+309";
-    TString skim_jet_min_pt_3 = "-1e+309";
-    TString skim_jet_average_pt = "-1e+309";
+    // but the -Wliteral-range warnings say the max is 1.7976931348623157E+308
+    // so in the interest of removing those errors, we'll switch to that
+    TString skim_cluster_min_e = "-1.7976931348623157e+308";
+    TString skim_track_min_pt = "-1.7976931348623157e+308";
+    TString skim_muon_track_min_pt = "-1.7976931348623157e+308";
+    TString skim_jet_min_pt_1 = "-1.7976931348623157e+308";
+    TString skim_jet_min_pt_2 = "-1.7976931348623157e+308";
+    TString skim_jet_min_pt_3 = "-1.7976931348623157e+308";
+    TString skim_jet_average_pt = "-1.7976931348623157e+308";
     // -2147483648 = INT_MIN
     TString skim_multiplicity_tracklet_min_n = "-2147483648";
-    TString stored_track_min_pt = "-1e+309";
-    TString stored_jet_min_pt_raw = "-1e+309";
+    TString stored_track_min_pt = "-1.7976931348623157e+308";
+    TString stored_jet_min_pt_raw = "-1.7976931348623157e+308";
     TString nrandom_isolation = "0";
+    TString track_cuts_period = "";
+    bool is_mc = false;
+    bool is_embed = false;
+    TString embed_local_file_list = "";
+    TString embed_grid_file_pattern = "";
 
     while (fgets(line, 4096, fp) != NULL) {
         if (line[0] == '#') {
@@ -351,6 +359,21 @@ void runNTGJ(const char *config_filename = "config/lhc16c2_1run.yaml",
         else if (strcmp(key, "nrandomIsolation") == 0) {
             nrandom_isolation = value;
         }
+        else if (strcmp(key, "trackCutsPeriod") == 0) {
+            track_cuts_period = value;
+        }
+        else if (strcmp(key, "isMC") == 0) {
+            is_mc = strncmp(value, "true", 4) == 0;
+        }
+        else if (strcmp(key, "isEmbed") == 0) {
+            is_embed = strncmp(value, "true", 4) == 0;
+        }
+        else if (strcmp(key, "embedLocalFileList") == 0) {
+            embed_local_file_list = value;
+        }
+        else if (strcmp(key, "embedGridFilePattern") == 0) {
+            embed_grid_file_pattern = value;
+        }
     }
     fclose(fp);
 
@@ -390,6 +413,7 @@ void runNTGJ(const char *config_filename = "config/lhc16c2_1run.yaml",
         "half.h halfLimits.h toFloat.h "
         "cgal_4_9.h "
         "keras_model.h keras_model.cc "
+        "track_cuts.h "
         "photon_discr.model "
         // Not sure if this helps against the missing pyqpar_ when
         // dlopen() "libAliPythia6.so"
@@ -400,8 +424,6 @@ void runNTGJ(const char *config_filename = "config/lhc16c2_1run.yaml",
         mkl_filename + " " + efp7_filename + " " +
         emcal_correction_filename + " " +
         oadb_filename);
-    // fprintf(stderr, "%s:%d: mkl_filename = `%s'\n", __FILE__,
-    //         __LINE__, mkl_filename.Data());
     plugin->SetAnalysisSource("AliAnalysisTaskNTGJ.cxx");
 
     // Honor alien_CLOSE_SE for the output also, e.g. when
@@ -420,9 +442,6 @@ void runNTGJ(const char *config_filename = "config/lhc16c2_1run.yaml",
             "root_archive.zip:%s,*.stat@%s",
             alien_close_se, file, alien_close_se));
     }
-
-    plugin->SetRunMode(run_mode);
-    mgr->SetGridHandler(plugin);
 
     TString add_task_line = ".x macros/AddAliAnalysisTaskNTGJ.C("
         "\"AliAnalysisTaskNTGJ\",\"";
@@ -444,7 +463,12 @@ void runNTGJ(const char *config_filename = "config/lhc16c2_1run.yaml",
         skim_multiplicity_tracklet_min_n + "," +
         stored_track_min_pt + "," +
         stored_jet_min_pt_raw + "," +
-        nrandom_isolation + ")";
+        nrandom_isolation + ",\"" +
+        track_cuts_period + "\"," +
+        (is_mc ? "true" : "false") + "," +
+        (is_embed ? "true" : "false") + ",\"" +
+        embed_local_file_list + "\",\"" +
+        embed_grid_file_pattern + "\")";
     // fprintf(stderr, "%s:%d: add_task_line = `%s'\n", __FILE__,
     //         __LINE__, add_task_line.Data());
     if (strcmp(run_mode, "parse_only") == 0) {
@@ -453,6 +477,33 @@ void runNTGJ(const char *config_filename = "config/lhc16c2_1run.yaml",
     gROOT->ProcessLine(add_task_line);
 
     if (mgr->InitAnalysis()) {
-        mgr->StartAnalysis("grid");
+        if (strcmp(run_mode, "local") != 0) {
+            plugin->SetNtestFiles(1);
+            plugin->SetRunMode(run_mode);
+            mgr->SetGridHandler(plugin);
+            mgr->StartAnalysis("grid");
+        } else {
+            UInt_t iNumFiles = 1;
+            UInt_t iNumEvents = 10;
+
+            // local analysis with AOD
+            TString sLocalFiles(local_file_list);
+            TChain* pChain = 0;
+            #ifdef __CLING__
+            std::stringstream aodChain;
+            aodChain << ".x " << gSystem->Getenv("ALICE_PHYSICS") <<  "/PWG/EMCAL/macros/CreateAODChain.C(";
+            aodChain << "\"" << sLocalFiles.Data() << "\", ";
+            aodChain << iNumEvents << ", ";
+            aodChain << 0 << ", ";
+            aodChain << std::boolalpha << kFALSE << ");";
+            pChain = reinterpret_cast<TChain *>(gROOT->ProcessLine(aodChain.str().c_str()));
+            #else
+            gROOT->LoadMacro("$ALICE_PHYSICS/PWG/EMCAL/macros/CreateAODChain.C");
+            pChain = CreateAODChain(sLocalFiles.Data(), iNumFiles, 0, kFALSE);
+            #endif
+
+            Printf("Starting Analysis...");
+            mgr->StartAnalysis("local", pChain, iNumEvents);
+        }
     }
 }

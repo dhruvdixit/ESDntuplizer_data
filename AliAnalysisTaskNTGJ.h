@@ -476,6 +476,7 @@ private:
     double _stored_track_min_pt;
     double _stored_jet_min_pt_raw;
     unsigned int _nrandom_isolation;
+    bool _is_embed;
 
     std::vector<bool> _emcal_mask; //!
 
@@ -491,7 +492,6 @@ public:
     AliAnalysisTaskNTGJ &operator=(const AliAnalysisTaskNTGJ &);
     ~AliAnalysisTaskNTGJ(void);
     virtual void UserCreateOutputObjects(void);
-    virtual void Run(Option_t *);
     AliEMCALRecoUtils *GetEMCALRecoUtils(void);
     void SetAliROOTVersion(const char *version);
     void SetAliPhysicsVersion(const char *version);
@@ -516,7 +516,11 @@ public:
     void SetStoredTrackMinPt(double min_pt = -INFINITY);
     void SetStoredJetMinPtRaw(double min_pt_raw = -INFINITY);
     void SetNRandomIsolation(unsigned int nrandom_isolation = 0);
+    void SetIsEmbed(bool is_embed = false);
     ClassDef(AliAnalysisTaskNTGJ, 1);
+
+protected:
+    Bool_t Run();
 
 };
 

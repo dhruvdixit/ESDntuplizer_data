@@ -55,22 +55,22 @@ namespace {
         }
 
         return pdg_is_parton(p->PdgCode()) &&
-            !(p->GetFirstDaughter() > 0 &&
-              p->GetFirstDaughter() < s->GetNprimary() &&
+            !(p->GetDaughterFirst() > 0 &&
+              p->GetDaughterFirst() < s->GetNprimary() &&
               dynamic_cast<AliMCParticle *>(
                 mc_event->GetTrack(
-                    p->GetFirstDaughter())) != NULL &&
+                    p->GetDaughterFirst())) != NULL &&
               pdg_is_parton(dynamic_cast<AliMCParticle *>(
                 mc_event->GetTrack(
-                    p->GetFirstDaughter()))->PdgCode())) &&
-            !(p->GetLastDaughter() > 0 &&
-              p->GetLastDaughter() < s->GetNprimary() &&
+                    p->GetDaughterFirst()))->PdgCode())) &&
+            !(p->GetDaughterLast() > 0 &&
+              p->GetDaughterLast() < s->GetNprimary() &&
               dynamic_cast<AliMCParticle *>(
                 mc_event->GetTrack(
-                    p->GetLastDaughter())) != NULL &&
+                    p->GetDaughterLast())) != NULL &&
               pdg_is_parton(dynamic_cast<AliMCParticle *>(
                 mc_event->GetTrack(
-                    p->GetLastDaughter()))->PdgCode())) &&
+                    p->GetDaughterLast()))->PdgCode())) &&
             !(p->Px() == 0 && p->Py() == 0);
     }
 

@@ -1,5 +1,6 @@
 *.d
 *.eps
+*.pcm
 *.pdf
 *.png
 *.pyc
@@ -12,6 +13,7 @@
 AnalysisResults.root
 AutoDict_*_.cxx
 EventStat_temp.root
+OCDB*.xml
 ROOTMERGE-*.root
 \#*
 analysis.jdl
@@ -19,6 +21,7 @@ analysis.root
 analysis.sh
 analysis_validation.sh
 event_stat.root
+fileList.*.txt
 lib*_so
 myAnalysis.C
 outputs_valid
