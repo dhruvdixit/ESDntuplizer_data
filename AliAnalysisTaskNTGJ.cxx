@@ -46,6 +46,7 @@
 #include <AliAODMCParticle.h>
 #include <AliAODTracklets.h>
 #include <AliAODMCHeader.h>
+#include <AliAnalysisTaskEmcalEmbeddingHelper.h>
 
 #include "AliAnalysisTaskNTGJ.h"
 
@@ -612,13 +613,12 @@ Bool_t AliAnalysisTaskNTGJ::Run()
     //Getting the AOD MC info - copied from AOD_Ntuplizer
     TClonesArray* mcArray = dynamic_cast<TClonesArray*>(aod_event->FindListObject(AliAODMCParticle::StdBranchName()));
     AliAODMCHeader *mcHeader = NULL;
-    if (mcArray) {
-        mcHeader = dynamic_cast<AliAODMCHeader*>(aod_event->GetList()->FindObject(AliAODMCHeader::StdBranchName()));
-    }
-
     AliMCParticleContainer *mc_container = NULL;
-    //Getting the AOD MC info
-    if (mcArray) {
+    if (_is_embed) {
+        mcHeader = dynamic_cast<AliAODMCHeader*>(AliAnalysisTaskEmcalEmbeddingHelper::GetInstance()->GetEventHeader());
+        mc_container = GetMCParticleContainer("mcparticles");
+    } else if (mcArray) {
+        mcHeader = dynamic_cast<AliAODMCHeader*>(aod_event->GetList()->FindObject(AliAODMCHeader::StdBranchName()));
         mc_container = GetMCParticleContainer("mcparticles");
     }
 
@@ -794,7 +794,6 @@ Bool_t AliAnalysisTaskNTGJ::Run()
 
     AliClusterContainer *cluster_container = GetClusterContainer(0);
 
-    // this just keeps things consistent with the embedding version
     std::vector<AliTrackContainer*> track_containers;
     track_containers.push_back(GetTrackContainer(0));
     if (_is_embed) {
@@ -971,16 +970,13 @@ Bool_t AliAnalysisTaskNTGJ::Run()
 
             // Ensure termination even if there is a loop
             for (size_t k = 0; k < 1000; k++) {
-                const AliMCParticle *p =
-                    static_cast<AliMCParticle *>(
-                        mc_truth_event->GetTrack(j));
-
+                const AliAODMCParticle *p = mc_container->GetMCParticle(j);
                 if (p == NULL || p->Particle() == NULL) {
                     break;
                 }
                 j = p->Particle()->GetFirstMother();
                 if (!(j >= 0 &&
-                      j < mc_truth_event->GetNumberOfTracks())) {
+                      j < mc_container->GetNParticles())) {
                     break;
                 }
                 if (final_state_primary(mc_truth_event, j)) {
@@ -2495,9 +2491,9 @@ Bool_t AliAnalysisTaskNTGJ::Run()
     }
     else if (aod_event != NULL) {
         // FIXME: Not really implemented
-        TRefArray muon_track;
+        // TRefArray muon_track;
 
-        aod_event->GetMuonTracks(&muon_track);
+        // aod_event->GetMuonTracks(&muon_track);
     }
 
     // Now that the event is accepted, copy over the total counted

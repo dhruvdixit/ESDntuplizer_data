@@ -4,7 +4,7 @@ namespace {
 
     bool final_state_primary(AliMCEvent *mc_event, Int_t index)
     {
-        if (mc_event->HasSubsidiaries()) {
+        if ((mc_event != NULL) && mc_event->HasSubsidiaries()) {
             AliMCEvent *e = NULL;
             Int_t j = mc_event->FindIndexAndEvent(index, e);
             return final_state_primary(e, j);
@@ -46,6 +46,10 @@ namespace {
 
     bool parton_cms_algorithmic(AliMCEvent *mc_event, Int_t index)
     {
+        if (mc_event == NULL) {
+            return false;
+        }
+        
         AliStack *s = mc_event->Stack();
         const AliMCParticle *p =
             dynamic_cast<AliMCParticle *>(mc_event->GetTrack(index));
