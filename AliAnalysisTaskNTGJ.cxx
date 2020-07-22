@@ -191,6 +191,7 @@ ClassImp(AliAnalysisTaskNTGJ);
     _stored_track_min_pt(-INFINITY),                        \
     _stored_jet_min_pt_raw(-INFINITY),                      \
     _nrandom_isolation(0),                                  \
+    _is_embed(false),                                       \
     _emcal_mask(std::vector<bool>()),                       \
     _emcal_cell_position(NULL),                             \
     _keras_model_photon_discrimination(NULL),               \
@@ -221,6 +222,7 @@ AliAnalysisTaskNTGJ::AliAnalysisTaskNTGJ(
     _stored_track_min_pt = x._stored_track_min_pt;
     _stored_jet_min_pt_raw = x._stored_jet_min_pt_raw;
     _nrandom_isolation = x._nrandom_isolation;
+    _is_embed = x._is_embed;
 }
 
 #undef ntrigger_class
@@ -263,6 +265,7 @@ AliAnalysisTaskNTGJ &AliAnalysisTaskNTGJ::operator=(
     _stored_track_min_pt = x._stored_track_min_pt;
     _stored_jet_min_pt_raw = x._stored_jet_min_pt_raw;
     _nrandom_isolation = x._nrandom_isolation;
+    _is_embed = x._is_embed;
 
     return *this;
 }
@@ -1011,9 +1014,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
     double met_its_kahan_error[2] = { 0, 0 };
 
     _branch_ntrack = 0;
-    if (esd_event != NULL) {
-    }
-    else if (aod_event != NULL) {
+    if (aod_event != NULL) {
         Int_t itrack = 0;
         for (auto track_container : track_containers) {
             for (auto track : track_container->accepted()) {

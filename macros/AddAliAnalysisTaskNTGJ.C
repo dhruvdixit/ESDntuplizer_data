@@ -144,8 +144,13 @@ AddAliAnalysisTaskNTGJ(TString name,
     new AliAnalysisTaskNTGJ(name.Data());
 
   // add cluster, track, and MC containers
-  AliClusterContainer * clusterContainer = new AliClusterContainer("usedefault");
-  task->AdoptClusterContainer(clusterContainer);
+  if (is_embed) {
+    AliClusterContainer * clusterContainer = new AliClusterContainer("caloClustersCombined");
+    task->AdoptClusterContainer(clusterContainer);
+  } else {
+    AliClusterContainer * clusterContainer = new AliClusterContainer("usedefault");
+    task->AdoptClusterContainer(clusterContainer);
+  }
 
   if (track_cuts_period != "") {
     AliTrackContainer::SetDefTrackCutsPeriod(track_cuts_period);
