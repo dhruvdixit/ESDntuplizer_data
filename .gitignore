@@ -9,7 +9,7 @@
 *~
 .*.swp
 .\#*
-000*.xml
+[0-9][0-9][0-9][0-9][0-9][0-9]*.xml
 AnalysisResults.root
 AutoDict_*_.cxx
 EventStat_temp.root

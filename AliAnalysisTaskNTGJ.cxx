@@ -800,6 +800,15 @@ Bool_t AliAnalysisTaskNTGJ::Run()
         track_containers.push_back(GetTrackContainer(1));
     }
 
+    // if (mc_container) {
+    //     AliDebugStream(4) "Container has " << mc_container->GetNParticles() << " MC particles" << std::endl;
+    // }
+
+    // AliDebugStream(4) "Container has " << cluster_container->GetNAcceptEntries() << " clusters" << std::endl;
+    // for (auto track_container : track_containers) {
+    //     AliDebugStream(4) "Container has " << track_container->GetNAcceptEntries() << " tracks" << std::endl;
+    // }
+
     if (_skim_cluster_min_e > -INFINITY) {
         double cluster_e_max = -INFINITY;
 
@@ -1009,6 +1018,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
     double met_tpc_kahan_error[2] = { 0, 0 };
     double met_its_kahan_error[2] = { 0, 0 };
 
+    // AliDebugStream(8) "loop 1 through tracks" << std::endl;
     _branch_ntrack = 0;
     if (aod_event != NULL) {
         Int_t itrack = 0;
@@ -1179,6 +1189,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
         cell_pass_basic_quality(cluster_container->GetNAcceptEntries(),
                                 false);
 
+    // AliDebugStream(8) "loop 1 through clusters" << std::endl;
     Int_t icluster = 0;
     for (auto c : cluster_container->accepted()) {
         Int_t cell_id_max = -1;
@@ -1324,6 +1335,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
 
     static const double scale_ghost = pow(2.0, -30.0);
 
+    // AliDebugStream(8) "loop 3 through MC container" << std::endl;
     if (mc_container) {
         double met_truth_kahan_error[2] = { 0, 0 };
 
@@ -1488,6 +1500,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
     // ATLAS global sequential (GS) correction (the tracking in ALICE
     // being the larger acceptance detector).
 
+    // AliDebugStream(8) "loop 2 through clusters" << std::endl;
     icluster = 0;
     for (auto c : cluster_container->accepted()) {
         if (cell_pass_basic_quality[icluster]) {
@@ -1666,6 +1679,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
                                 _nrandom_isolation : cluster_container->GetNAcceptEntries();
     AliESDCaloCluster dummy_cluster;
 
+    // AliDebugStream(8) "loop 3 through clusters; inner loops through cells, tracks, clusters, MC container" << std::endl;
     Int_t i = 0;
     for (auto cluster : cluster_container->accepted()) {
         if (i >= ncalo_cluster) {
