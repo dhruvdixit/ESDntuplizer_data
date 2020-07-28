@@ -1143,7 +1143,7 @@ namespace {
 
 #define FILL_BRANCH_JET_TRUTH(t, s, jet_truth)                      \
     _branch_njet_ ## t ## _ ## s = 0;                               \
-    if (mc_truth_event != NULL) {                                   \
+    if (mc_container != NULL) {                                     \
         for (std::vector<fastjet::PseudoJet>::const_iterator        \
                  iterator_jet = jet_truth.begin();                  \
              iterator_jet != jet_truth.end(); iterator_jet++) {     \
@@ -1197,7 +1197,7 @@ namespace {
 
 #define TAG_PARTICLE_RECO_JET_TRUTH(particle_reco_tagged,           \
                                     jet_truth, is_charged)          \
-    if (mc_truth_event != NULL) {                                   \
+    if (mc_container != NULL) {                                     \
         for (std::vector<fastjet::PseudoJet>::const_iterator        \
                  iterator_jet = jet_truth.begin();                  \
              iterator_jet != jet_truth.end(); iterator_jet++) {     \
@@ -1223,17 +1223,16 @@ namespace {
     }
 
 #define TAG_PARTICLE_RECO_PARTON(particle_reco_tagged, t, tt)       \
-    if (mc_truth_event != NULL) {                                   \
+    if (mc_container != NULL) {                                     \
         for (std::vector<Int_t>::const_iterator                     \
                  iterator_parton_index =                            \
                  reverse_stored_parton_ ## t ## _index.begin();     \
              iterator_parton_index !=                               \
                  reverse_stored_parton_ ## t ## _index.end();       \
              iterator_parton_index++) {                             \
-            const AliMCParticle *p =                                \
-                dynamic_cast<AliMCParticle *>(                      \
-                    mc_truth_event->GetTrack(                       \
-                        *iterator_parton_index));                   \
+            const AliAODMCParticle *p =                             \
+                 mc_container->GetMCParticle(                       \
+                    *iterator_parton_index);                        \
                                                                     \
             particle_reco_tagged.push_back(fastjet::PseudoJet(      \
                 p->Px() * scale_ghost, p->Py() * scale_ghost,       \
@@ -1435,7 +1434,7 @@ namespace {
         _branch_jet_ ## s ## _phi_charged_truth                     \
             [_branch_njet_ ## s] = NAN;                             \
                                                                     \
-        if (mc_truth_event != NULL &&                               \
+        if (mc_container != NULL &&                                 \
             iterator_jet_tagged != jet_reco_tagged.end()) {         \
             std::map<int, double> z_ghost;                          \
             std::map<int, double> z_ghost_charged;                  \

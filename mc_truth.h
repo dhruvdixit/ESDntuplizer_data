@@ -1,23 +1,14 @@
-#include <AliMCEvent.h>
-
 namespace {
 
-    bool final_state_primary(AliMCEvent *mc_event, Int_t index)
+    bool final_state_primary(AliMCParticleContainer *mc_container, Int_t index)
     {
-        if ((mc_event != NULL) && mc_event->HasSubsidiaries()) {
-            AliMCEvent *e = NULL;
-            Int_t j = mc_event->FindIndexAndEvent(index, e);
-            return final_state_primary(e, j);
-        }
-        else if (mc_event != NULL) {
-            AliStack *s = mc_event->Stack();
+        const AliAODMCParticle *p = mc_container->GetMCParticle(index);
 
-            return index < s->GetNprimary() &&
-                s->Particle(index)->GetStatusCode() == 1;
-        }
-        else {
+        if (p == NULL) {
             return false;
         }
+
+        return p->MCStatusCode() == 1;
     }
 
     bool pdg_is_parton(Int_t pdg_code)
@@ -44,37 +35,29 @@ namespace {
     // https://github.com/cms-sw/cmssw/blob/master/PhysicsTools/
     // JetMCAlgos/src/Pythia8PartonSelector.cc
 
-    bool parton_cms_algorithmic(AliMCEvent *mc_event, Int_t index)
+    bool parton_cms_algorithmic(AliMCParticleContainer *mc_container, Int_t index)
     {
-        if (mc_event == NULL) {
-            return false;
-        }
-        
-        AliStack *s = mc_event->Stack();
-        const AliMCParticle *p =
-            dynamic_cast<AliMCParticle *>(mc_event->GetTrack(index));
+        const AliAODMCParticle *p = mc_container->GetMCParticle(index);
 
-        if (!(s != NULL && p != NULL)) {
+        if (p == NULL) {
             return false;
         }
 
         return pdg_is_parton(p->PdgCode()) &&
             !(p->GetDaughterFirst() > 0 &&
-              p->GetDaughterFirst() < s->GetNprimary() &&
-              dynamic_cast<AliMCParticle *>(
-                mc_event->GetTrack(
-                    p->GetDaughterFirst())) != NULL &&
-              pdg_is_parton(dynamic_cast<AliMCParticle *>(
-                mc_event->GetTrack(
-                    p->GetDaughterFirst()))->PdgCode())) &&
+              p->GetDaughterFirst() < mc_container->GetNParticles() &&
+                mc_container->GetMCParticle(
+                    p->GetDaughterFirst()) != NULL &&
+              pdg_is_parton(
+                mc_container->GetMCParticle(
+                    p->GetDaughterFirst())->PdgCode())) &&
             !(p->GetDaughterLast() > 0 &&
-              p->GetDaughterLast() < s->GetNprimary() &&
-              dynamic_cast<AliMCParticle *>(
-                mc_event->GetTrack(
-                    p->GetDaughterLast())) != NULL &&
-              pdg_is_parton(dynamic_cast<AliMCParticle *>(
-                mc_event->GetTrack(
-                    p->GetDaughterLast()))->PdgCode())) &&
+              p->GetDaughterLast() < mc_container->GetNParticles() &&
+                mc_container->GetMCParticle(
+                    p->GetDaughterLast()) != NULL &&
+              pdg_is_parton(
+                mc_container->GetMCParticle(
+                    p->GetDaughterLast())->PdgCode())) &&
             !(p->Px() == 0 && p->Py() == 0);
     }
 

@@ -12,15 +12,11 @@
 #include <TSystem.h>
 #include <TGeoManager.h>
 #include <TGeoGlobalMagField.h>
-#include "TCanvas.h"
-#include "TParticle.h"
-#include "TH1I.h"
-#include <TDatabasePDG.h>
-
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Woverloaded-virtual"
 #include <AliVEvent.h>
+#include <AliAODEvent.h>
 #pragma GCC diagnostic pop
 #include <AliESDEvent.h>
 #include <AliESDHeader.h>
@@ -33,6 +29,8 @@
 #include <AliMCEvent.h>
 #include <AliGenEventHeader.h>
 #include <AliGenPythiaEventHeader.h>
+#include <AliGenCocktailEventHeader.h>
+#include <AliAODMCParticle.h>
 #include <AliESDMuonTrack.h>
 
 #include <AliMultSelection.h>
@@ -40,19 +38,22 @@
 
 #include <AliMagF.h>
 
-#include <AliAODEvent.h>
 #include <AliAODTrack.h>
 #include <AliAODVertex.h>
-#include <AliAODMCParticle.h>
 #include <AliAODTracklets.h>
 #include <AliAODMCHeader.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weffc++"
 #include <AliAnalysisTaskEmcalEmbeddingHelper.h>
+#pragma GCC diagnostic pop
 
 #include "AliAnalysisTaskNTGJ.h"
 
 #ifndef __CINT__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Weffc++"
+#pragma GCC diagnostic ignored "-Wdeprecated-register"
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <fastjet/PseudoJet.hh>
 #include <fastjet/JetDefinition.hh>
 #include <fastjet/AreaDefinition.hh>
@@ -447,6 +448,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
         aod_event->GetTriggerMaskNext50();
     _branch_has_misalignment_matrix = false;
 
+#if 0
     if (_f1_ncluster_tpc_linear_pt_dep == NULL) {
         // PWG-JE cuts, see AddTrackCutsLHC10h() in
         // AliPhysics/PWGJE/macros/AddTaskESDFilterPWGJETrain.C
@@ -540,6 +542,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
         _track_cut.back().SetDCAToVertex2D(kTRUE);
         _track_cut.back().SetMaxChi2PerClusterITS(36);
     }
+#endif
 
     AliVVZERO *v0 = event->GetVZEROData();
 
@@ -607,20 +610,8 @@ Bool_t AliAnalysisTaskNTGJ::Run()
         LoadModel("photon_discr.model");
     }
 
-    // this was already set to null anyway, and it's easier to keep this in for now than to strip absolutely everything out
-    AliMCEvent *mc_truth_event = NULL;
-
-    //Getting the AOD MC info - copied from AOD_Ntuplizer
-    TClonesArray* mcArray = dynamic_cast<TClonesArray*>(aod_event->FindListObject(AliAODMCParticle::StdBranchName()));
-    AliAODMCHeader *mcHeader = NULL;
-    AliMCParticleContainer *mc_container = NULL;
-    if (_is_embed) {
-        mcHeader = dynamic_cast<AliAODMCHeader*>(AliAnalysisTaskEmcalEmbeddingHelper::GetInstance()->GetEventHeader());
-        mc_container = GetMCParticleContainer("mcparticles");
-    } else if (mcArray) {
-        mcHeader = dynamic_cast<AliAODMCHeader*>(aod_event->GetList()->FindObject(AliAODMCHeader::StdBranchName()));
-        mc_container = GetMCParticleContainer("mcparticles");
-    }
+    // mc_container will be 0 if there is no MC particle container
+    AliMCParticleContainer *mc_container = GetMCParticleContainer("mcparticles");
 
     _branch_eg_signal_process_id = INT_MIN;
     _branch_eg_mpi = INT_MIN;
@@ -646,40 +637,48 @@ Bool_t AliAnalysisTaskNTGJ::Run()
               sizeof(*_branch_eg_pdf_x_pdf), NAN);
 
     // FIXME: Weight is missing, AliGenEventHeader::EventWeight()
-    if (mcHeader != NULL) {
-        //_branch_eg_weight = mcHeader->EventWeight();
-
-        TArrayF eg_primary_vertex(3);
-        Double_t eg_primary_vertex_doubleArray[3];
-
-        mcHeader->GetVertex(eg_primary_vertex_doubleArray);
-        eg_primary_vertex[0] = eg_primary_vertex_doubleArray[0];
-        eg_primary_vertex[1] = eg_primary_vertex_doubleArray[1];
-        eg_primary_vertex[2] = eg_primary_vertex_doubleArray[2];
-
-        for (Int_t i = 0; i < 3; i++) {
-            _branch_eg_primary_vertex[i] = eg_primary_vertex.At(i);
+    if (mc_container) {
+        AliGenPythiaEventHeader *mc_truth_pythia_header = NULL;
+        // embedding MC header is done separately for now
+        if (_is_embed) {
+            mc_truth_pythia_header = AliAnalysisTaskEmcalEmbeddingHelper::GetInstance()->GetPythiaHeader();
         }
-        Int_t nGenerators = mcHeader->GetNCocktailHeaders();
-        for (Int_t igen = 0; igen < nGenerators; igen++) {
-            AliGenEventHeader *eventHeaderGen = mcHeader->GetCocktailHeader(igen);
-            TString name = eventHeaderGen->GetName();
+        else {
+            AliAODMCHeader *aod_mc_header = dynamic_cast<AliAODMCHeader*>
+                (aod_event->GetList()->FindObject(AliAODMCHeader::StdBranchName()));
 
-            if (name.CompareTo("Pythia") == 0) { //This line works!!!
+            Int_t nGenerators = aod_mc_header->GetNCocktailHeaders();
+            for (Int_t igen = 0; igen < nGenerators; igen++) {
+                AliGenEventHeader *eventHeaderGen = aod_mc_header->GetCocktailHeader(igen);
+                TString name = eventHeaderGen->GetName();
 
-                AliGenPythiaEventHeader* mc_truth_pythia_header = dynamic_cast<AliGenPythiaEventHeader*>(eventHeaderGen);
-                _branch_eg_signal_process_id =
-                    mc_truth_pythia_header->ProcessType();
-                _branch_eg_mpi = mc_truth_pythia_header->GetNMPI();
-                _branch_eg_pt_hat =
-                    mc_truth_pythia_header->GetPtHard();
-                _branch_eg_cross_section =
-                    mc_truth_pythia_header->GetXsection();
-                // Count ntrial, because the event might get skimmed away
-                // by the ntuplizer
-                _skim_sum_eg_ntrial +=
-                    mc_truth_pythia_header->Trials();
+                if (name.CompareTo("Pythia") == 0) { //This line works!!!
+                    mc_truth_pythia_header = dynamic_cast<AliGenPythiaEventHeader*>(eventHeaderGen);
+                }
             }
+        }
+
+        if (mc_truth_pythia_header != NULL) {
+            _branch_eg_weight = mc_truth_pythia_header->EventWeight();
+
+            TArrayF eg_primary_vertex(3);
+
+            mc_truth_pythia_header->PrimaryVertex(eg_primary_vertex);
+            for (Int_t i = 0; i < 3; i++) {
+                _branch_eg_primary_vertex[i] = eg_primary_vertex.At(i);
+            }
+
+            _branch_eg_signal_process_id =
+                mc_truth_pythia_header->ProcessType();
+            _branch_eg_mpi = mc_truth_pythia_header->GetNMPI();
+            _branch_eg_pt_hat =
+                mc_truth_pythia_header->GetPtHard();
+            _branch_eg_cross_section =
+                mc_truth_pythia_header->GetXsection();
+            // Count ntrial, because the event might get skimmed away
+            // by the ntuplizer
+            _skim_sum_eg_ntrial +=
+                mc_truth_pythia_header->Trials();
         }
     }
 
@@ -800,14 +799,14 @@ Bool_t AliAnalysisTaskNTGJ::Run()
         track_containers.push_back(GetTrackContainer(1));
     }
 
-    // if (mc_container) {
-    //     AliDebugStream(4) "Container has " << mc_container->GetNParticles() << " MC particles" << std::endl;
-    // }
+    if (mc_container) {
+        AliDebugStream(2) << "Container has " << mc_container->GetNParticles() << " MC particles" << std::endl;
+    }
 
-    // AliDebugStream(4) "Container has " << cluster_container->GetNAcceptEntries() << " clusters" << std::endl;
-    // for (auto track_container : track_containers) {
-    //     AliDebugStream(4) "Container has " << track_container->GetNAcceptEntries() << " tracks" << std::endl;
-    // }
+    AliDebugStream(2) << "Container has " << cluster_container->GetNAcceptEntries() << " clusters" << std::endl;
+    for (auto track_container : track_containers) {
+        AliDebugStream(2) << "Container has " << track_container->GetNAcceptEntries() << " tracks" << std::endl;
+    }
 
     if (_skim_cluster_min_e > -INFINITY) {
         double cluster_e_max = -INFINITY;
@@ -946,13 +945,13 @@ Bool_t AliAnalysisTaskNTGJ::Run()
     std::vector<Int_t> reverse_stored_mc_truth_index;
     std::vector<Int_t> reverse_stored_parton_algorithmic_index;
 
+    AliDebugStream(3) << "loops 1 and 2 through MC container" << std::endl;
     if (mc_container) {
         stored_mc_truth_index.resize(mc_container->GetNParticles(), ULONG_MAX);
         size_t nmc_truth = 0;
         for (Int_t i = 0; i < mc_container->GetNParticles(); i++) {
             // Bookkeeping for primary final state particles
-            //for time being final_state_primary(mc_event, i) alwasy returns true
-            if (final_state_primary(mc_truth_event, i)) {
+            if (final_state_primary(mc_container, i)) {
                 stored_mc_truth_index[i] = nmc_truth;
                 reverse_stored_mc_truth_index.push_back(i);
                 nmc_truth++;
@@ -960,17 +959,16 @@ Bool_t AliAnalysisTaskNTGJ::Run()
 
 
             // Bookkeeping for partons
-            if (parton_cms_algorithmic(mc_truth_event, i)) {
+            if (parton_cms_algorithmic(mc_container, i)) {
                 reverse_stored_parton_algorithmic_index.push_back(i);
             }
         }
 
         // Assign secondaries to the primaries
-
         for (Int_t i = 0;
              i < mc_container->GetNParticles(); i++) {
             // Skip primaries
-            if (final_state_primary(mc_truth_event, i)) {
+            if (final_state_primary(mc_container, i)) {
                 continue;
             }
 
@@ -980,15 +978,15 @@ Bool_t AliAnalysisTaskNTGJ::Run()
             // Ensure termination even if there is a loop
             for (size_t k = 0; k < 1000; k++) {
                 const AliAODMCParticle *p = mc_container->GetMCParticle(j);
-                if (p == NULL || p->Particle() == NULL) {
+                if (p == NULL) {
                     break;
                 }
-                j = p->Particle()->GetFirstMother();
+                j = p->GetMother();
                 if (!(j >= 0 &&
                       j < mc_container->GetNParticles())) {
                     break;
                 }
-                if (final_state_primary(mc_truth_event, j)) {
+                if (final_state_primary(mc_container, j)) {
                     has_physical_primary_ancestor = true;
                     break;
                 }
@@ -1018,7 +1016,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
     double met_tpc_kahan_error[2] = { 0, 0 };
     double met_its_kahan_error[2] = { 0, 0 };
 
-    // AliDebugStream(8) "loop 1 through tracks" << std::endl;
+    AliDebugStream(3) << "loop 1 through tracks" << std::endl;
     _branch_ntrack = 0;
     if (aod_event != NULL) {
         Int_t itrack = 0;
@@ -1189,7 +1187,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
         cell_pass_basic_quality(cluster_container->GetNAcceptEntries(),
                                 false);
 
-    // AliDebugStream(8) "loop 1 through clusters" << std::endl;
+    AliDebugStream(3) << "loop 1 through clusters" << std::endl;
     Int_t icluster = 0;
     for (auto c : cluster_container->accepted()) {
         Int_t cell_id_max = -1;
@@ -1335,7 +1333,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
 
     static const double scale_ghost = pow(2.0, -30.0);
 
-    // AliDebugStream(8) "loop 3 through MC container" << std::endl;
+    AliDebugStream(3) << "loop 3 through MC container" << std::endl;
     if (mc_container) {
         double met_truth_kahan_error[2] = { 0, 0 };
 
@@ -1424,31 +1422,30 @@ Bool_t AliAnalysisTaskNTGJ::Run()
                 std::min(SHRT_MAX,
                          std::max(SHRT_MIN, p->PdgCode()));
             _branch_mc_truth_status[_branch_nmc_truth] =
-                std::min(static_cast<Int_t>(UCHAR_MAX),
-                         std::max(0,
-                                  mc_truth_event->
-                                  Particle(*iterator)->
-                                  GetStatusCode()));
+                std::min(static_cast<UInt_t>(UCHAR_MAX),
+                         std::max(static_cast<UInt_t>(0),
+                                  mc_container->
+                                  GetMCParticle(*iterator)->
+                                  MCStatusCode()));
             // _branch_mc_truth_final_state_primary[_branch_nmc_truth] =
-            //     final_state_primary(mc_truth_event, *iterator);
+            //     final_state_primary(mc_container, *iterator);
             // _branch_mc_truth_first_parent[_branch_nmc_truth] =
-            //     p->Particle()->GetFirstMother();
+            //     p->GetMother();
             // _branch_mc_truth_first_child[_branch_nmc_truth] =
-            //     p->Particle()->GetFirstDaughter();
+            //     p->GetDaughterFirst();
             // _branch_mc_truth_first_child[_branch_nmc_truth] =
-            //     p->Particle()->GetLastDaughter();
+            //     p->GetDaughterLast();
             _branch_mc_truth_generator_index[_branch_nmc_truth] =
                 std::min(static_cast<Short_t>(UCHAR_MAX),
                          std::max(static_cast<Short_t>(0),
                                   p->GetGeneratorIndex()));
 
-            if (p->Particle()->GetFirstMother() >= 0 &&
-                p->Particle()->GetFirstMother() <
-                mc_truth_event->GetNumberOfTracks()) {
-                const AliMCParticle *pp =
-                    static_cast<AliMCParticle *>(
-                        mc_truth_event->GetTrack(
-                            p->Particle()->GetFirstMother()));
+            if (p->GetMother() >= 0 &&
+                p->GetMother() <
+                mc_container->GetNParticles()) {
+                const AliAODMCParticle *pp =
+                    mc_container->GetMCParticle(
+                        p->GetMother());
 
                 _branch_mc_truth_first_parent_pdg_code
                     [_branch_nmc_truth] = pp->PdgCode();
@@ -1462,11 +1459,11 @@ Bool_t AliAnalysisTaskNTGJ::Run()
                     [_branch_nmc_truth] = half(pp->Phi());
                 _branch_mc_truth_sibling_index[_branch_nmc_truth] =
                     *iterator ==
-                    pp->Particle()->GetFirstDaughter() ?
-                    pp->Particle()->GetLastDaughter() :
+                    pp->GetDaughterFirst() ?
+                    pp->GetDaughterLast() :
                     *iterator ==
-                    pp->Particle()->GetLastDaughter() ?
-                    pp->Particle()->GetFirstDaughter() :
+                    pp->GetDaughterLast() ?
+                    pp->GetDaughterFirst() :
                     USHRT_MAX;
             }
 
@@ -1500,7 +1497,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
     // ATLAS global sequential (GS) correction (the tracking in ALICE
     // being the larger acceptance detector).
 
-    // AliDebugStream(8) "loop 2 through clusters" << std::endl;
+    AliDebugStream(3) << "loop 2 through clusters" << std::endl;
     icluster = 0;
     for (auto c : cluster_container->accepted()) {
         if (cell_pass_basic_quality[icluster]) {
@@ -1679,7 +1676,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
                                 _nrandom_isolation : cluster_container->GetNAcceptEntries();
     AliESDCaloCluster dummy_cluster;
 
-    // AliDebugStream(8) "loop 3 through clusters; inner loops through cells, tracks, clusters, MC container" << std::endl;
+    AliDebugStream(3) << "loop 3 through clusters; inner loops through cells, tracks, clusters, MC container" << std::endl;
     Int_t i = 0;
     for (auto cluster : cluster_container->accepted()) {
         if (i >= ncalo_cluster) {
@@ -2210,7 +2207,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
 
             for (Int_t j = 0;
                     j < mc_container->GetNParticles(); j++) {
-                if (final_state_primary(mc_truth_event, j) &&
+                if (final_state_primary(mc_container, j) &&
                         cluster_mc_truth_index.find(j) ==
                         cluster_mc_truth_index.end()) {
                     const AliAODMCParticle *t = mc_container->GetMCParticle(j);
@@ -2424,6 +2421,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
         }
     }
 
+#if 0
     _branch_nmuon_track = 0;
     if (esd_event != NULL) {
         for (Int_t i = 0; i < esd_event->GetNumberOfMuonTracks(); i++) {
@@ -2509,6 +2507,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
 
         // aod_event->GetMuonTracks(&muon_track);
     }
+#endif
 
     // Now that the event is accepted, copy over the total counted
     // ntrials so far, and reset the ntrial counter
