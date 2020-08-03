@@ -1,4 +1,4 @@
-gridWorkingDir:     workingdir_test4
+gridWorkingDir:     workingdir_test
 gridOutputDir:      outputdir
 # aliROOTVersion:         v5-09-54a-2
 aliPhysicsVersion:      vAN-20200629-1
@@ -9,38 +9,33 @@ package:                fastjet::v3.2.1_1.024-alice3-2
 emcalGeometryFilename:    geometry_2015.root
 emcalLocal2MasterFilename:    EMCALlocal2master.root
 skimClusterMinE:        15.0
-splitMaxInputFileNumber: 20
+splitMaxInputFileNumber: 4
 
 gridDataDir:      /alice/data/2018/LHC18q
 dataPattern:      /pass3/AOD/*/AliAOD.root
 runPrefix:        000
 runNumber:        [296621]
-isMC: false
 
 # gridDataDir:      /alice/data/2015/LHC15o
 # dataPattern:      /pass1/AOD194/*/AliAOD.root
 # runPrefix:        000
 # runNumber:        [246766]
-# isMC: false
 
 # gridDataDir:      /alice/sim/2018/LHC18b10a_calo/4
 # dataPattern:      /AOD/*/AliAOD.root
 # runNumber:        [282025]
-# isMC: true
 
 # gridDataDir:      /alice/sim/2019/LHC19i3a1/4
 # dataPattern:      /AOD/*/AliAOD.root
 # runNumber:        [294925]
-# isMC: true
 
+isMC: false
 isEmbed: false
 emcalCorrection:    emcal_correction.yaml
 # emcalCorrection:    emcal_correctionMC.yaml
-
-# isEmbed: true
 # emcalCorrection:    emcal_correction_embed.yaml
-# # settings for embedding - only one should be active at a time
-# # file list for running locally - do not use alien
+# settings for embedding - only one should be active at a time
+# file list for running locally - do not use alien
 # embedLocalFileList:      pp-filelist-19i3a.txt
-# # file pattern for running on grid - do not run in test mode
-# # embedGridFilePattern:   alien:///alice/sim/2019/LHC19i3c1/4
+# file pattern for running on grid - do not run in test mode
+# embedGridFilePattern:   alien:///alice/sim/2019/LHC19i3c1/4
