@@ -525,6 +525,9 @@ protected:
 private:
     void loadEmcalGeometry();
     void getEvent();
+    void getContainers(AliClusterContainer *cluster_container,
+                       std::vector<AliTrackContainer*> *track_containers,
+                       AliMCParticleContainer *mc_container);
     void setTrackCuts();
     void getMultiplicityCentralityEventPlane();
     void loadPhotonNNModel();

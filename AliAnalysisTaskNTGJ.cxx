@@ -338,8 +338,13 @@ void AliAnalysisTaskNTGJ::UserCreateOutputObjects(void)
 
 Bool_t AliAnalysisTaskNTGJ::Run()
 {
+    AliClusterContainer *cluster_container = NULL;
+    std::vector<AliTrackContainer*> *track_containers = new std::vector<AliTrackContainer*>;
+    AliMCParticleContainer *mc_container = NULL;
+
     loadEmcalGeometry();
     getEvent();
+    getContainers(cluster_container, track_containers, mc_container);
     setTrackCuts();
     getMultiplicityCentralityEventPlane();
     loadPhotonNNModel();
@@ -378,6 +383,28 @@ void AliAnalysisTaskNTGJ::loadEmcalGeometry()
 void AliAnalysisTaskNTGJ::getEvent()
 {
 
+}
+
+void AliAnalysisTaskNTGJ::getContainers(AliClusterContainer *cluster_container,
+                                        std::vector<AliTrackContainer*> *track_containers,
+                                        AliMCParticleContainer *mc_container)
+{
+    cluster_container = GetClusterContainer(0);
+    track_containers->push_back(GetTrackContainer(0));
+    if (_is_embed) {
+        track_containers->push_back(GetTrackContainer(1));
+    }
+    mc_container = GetMCParticleContainer("mcparticles");
+
+    AliDebugStream(2) << "Event has " << cluster_container->GetNAcceptEntries() << " clusters" << std::endl;
+    int ntrack = 0;
+    for (auto track_container : *track_containers) {
+        ntrack += track_container->GetNAcceptEntries();
+    }
+    AliDebugStream(2) << "Event has " << ntrack << " tracks" << std::endl;
+    if (mc_container) {
+        AliDebugStream(2) << "Event has " << mc_container->GetNParticles() << " MC particles" << std::endl;
+    }
 }
 
 void AliAnalysisTaskNTGJ::setTrackCuts()
