@@ -338,16 +338,188 @@ void AliAnalysisTaskNTGJ::UserCreateOutputObjects(void)
 
 Bool_t AliAnalysisTaskNTGJ::Run()
 {
-    AliVEvent *event = InputEvent();
-
-    if (event == NULL) {
-        return false;
-    }
-
-    _branch_run_number = event->GetRunNumber();
+    loadEmcalGeometry();
+    getEvent();
+    setTrackCuts();
+    getMultiplicityCentralityEventPlane();
+    loadPhotonNNModel();
+    loadMC();
+    getBeamProperties();
+    skimClusterE();
+    getMetadata();
+    getEmcalCellInfo();
+    getPrimaryMCParticles();
+    initializeFastjetVectors();
+    doTrackLoop();
+    doClusterLoopForAreaDetermination();
+    computeVoronoiAreas();
+    initializeMoreFastjetVectors();
+    doMCParticleLoop();
+    fastjetTruthJets();
+    doClusterLoopForJets();
+    doManyFastjetThings();
+    getUEEstimate();
+    doClusterLoop();
+    fillJetBranches();
+    skimJets();
+    fillCellBranches();
+    fillMuonBranches();
+    fillEgNtrial();
 
     _tree_event->Fill();
     return true;
+}
+
+void AliAnalysisTaskNTGJ::loadEmcalGeometry()
+{
+
+}
+
+void AliAnalysisTaskNTGJ::getEvent()
+{
+
+}
+
+void AliAnalysisTaskNTGJ::setTrackCuts()
+{
+
+}
+
+void AliAnalysisTaskNTGJ::getMultiplicityCentralityEventPlane()
+{
+
+}
+
+void AliAnalysisTaskNTGJ::loadPhotonNNModel()
+{
+
+}
+
+void AliAnalysisTaskNTGJ::loadMC()
+{
+
+}
+
+void AliAnalysisTaskNTGJ::getBeamProperties()
+{
+
+}
+
+void AliAnalysisTaskNTGJ::skimClusterE()
+{
+
+}
+
+void AliAnalysisTaskNTGJ::getMetadata()
+{
+
+}
+
+void AliAnalysisTaskNTGJ::getEmcalCellInfo()
+{
+
+}
+
+void AliAnalysisTaskNTGJ::getPrimaryMCParticles()
+{
+
+}
+
+void AliAnalysisTaskNTGJ::initializeFastjetVectors()
+{
+
+}
+
+void AliAnalysisTaskNTGJ::doTrackLoop()
+{
+
+}
+
+void AliAnalysisTaskNTGJ::doClusterLoopForAreaDetermination()
+{
+
+}
+
+void AliAnalysisTaskNTGJ::computeVoronoiAreas()
+{
+
+}
+
+void AliAnalysisTaskNTGJ::initializeMoreFastjetVectors()
+{
+
+}
+
+void AliAnalysisTaskNTGJ::doMCParticleLoop()
+{
+
+}
+
+void AliAnalysisTaskNTGJ::fastjetTruthJets()
+{
+
+}
+
+void AliAnalysisTaskNTGJ::doClusterLoopForJets()
+{
+
+}
+
+void AliAnalysisTaskNTGJ::doManyFastjetThings()
+{
+
+}
+
+void AliAnalysisTaskNTGJ::getUEEstimate()
+{
+
+}
+
+void AliAnalysisTaskNTGJ::doClusterLoop()
+{
+    fillClusterBranches();
+    fillIsolationBranches();
+    fillPhotonNNBranches();
+}
+
+void AliAnalysisTaskNTGJ::fillClusterBranches()
+{
+
+}
+
+void AliAnalysisTaskNTGJ::fillIsolationBranches()
+{
+
+}
+
+void AliAnalysisTaskNTGJ::fillPhotonNNBranches()
+{
+
+}
+
+void AliAnalysisTaskNTGJ::fillJetBranches()
+{
+
+}
+
+void AliAnalysisTaskNTGJ::skimJets()
+{
+
+}
+
+void AliAnalysisTaskNTGJ::fillCellBranches()
+{
+
+}
+
+void AliAnalysisTaskNTGJ::fillMuonBranches()
+{
+
+}
+
+void AliAnalysisTaskNTGJ::fillEgNtrial()
+{
+
 }
 
 AliEMCALRecoUtils *AliAnalysisTaskNTGJ::GetEMCALRecoUtils(void)

@@ -522,6 +522,37 @@ public:
 protected:
     Bool_t Run();
 
+private:
+    void loadEmcalGeometry();
+    void getEvent();
+    void setTrackCuts();
+    void getMultiplicityCentralityEventPlane();
+    void loadPhotonNNModel();
+    void loadMC();
+    void getBeamProperties();
+    void skimClusterE();
+    void getMetadata();
+    void getEmcalCellInfo();
+    void getPrimaryMCParticles();
+    void initializeFastjetVectors();
+    void doTrackLoop();
+    void doClusterLoopForAreaDetermination();
+    void computeVoronoiAreas();
+    void initializeMoreFastjetVectors();
+    void doMCParticleLoop();
+    void fastjetTruthJets();
+    void doClusterLoopForJets();
+    void doManyFastjetThings();
+    void getUEEstimate();
+    void doClusterLoop();
+    void fillClusterBranches();
+    void fillIsolationBranches();
+    void fillPhotonNNBranches();
+    void fillJetBranches();
+    void skimJets();
+    void fillCellBranches();
+    void fillMuonBranches();
+    void fillEgNtrial();
 };
 
 #endif // ALIANALYSISTASKPHOTONDISC_H_
