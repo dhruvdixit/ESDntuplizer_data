@@ -498,9 +498,20 @@ private:
     void getMultiplicityCentralityEventPlane(AliVEvent *event);
     void loadPhotonNNModel();
     void loadMC();
-    void getBeamProperties();
+    void getBeamProperties(AliVEvent *event,
+                           AliESDEvent *esd_event,
+                           AliAODEvent *aod_event);
+    void getPrimaryVertex(AliVEvent *event,
+                          AliESDEvent *esd_event);
+    void getPrimaryVertexSPD(AliVEvent *event,
+                             AliESDEvent *esd_event,
+                             AliAODEvent *aod_event);
+    void getPileup(AliESDEvent *esd_event,
+                   AliAODEvent *aod_event);
+    bool skimMultiplicityTracklet(AliVEvent *event);
     bool skimClusterE();
-    void getMetadata();
+    void getMetadata(AliESDEvent *esd_event,
+                     AliAODEvent *aod_event);
     void getEmcalCellInfo();
     void getPrimaryMCParticles();
     void initializeFastjetVectors();

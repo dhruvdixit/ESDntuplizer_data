@@ -347,19 +347,22 @@ Bool_t AliAnalysisTaskNTGJ::Run()
     AliMCParticleContainer *mc_container = NULL;
 
     loadEmcalGeometry(); // Fernando
-    if (!getEvent(event, esd_event, aod_event)) {
+    if (!getEvent(event, esd_event, aod_event)) { // getEvent returns false if the event is null
         return false;
     }
     getContainers(cluster_container, track_containers, mc_container);
     setTrackCuts(); // Dhruv
-    getMultiplicityCentralityEventPlane(event); // Alwina
+    getMultiplicityCentralityEventPlane(event);
     loadPhotonNNModel(); // Fernando
     loadMC(); // Preeti
-    getBeamProperties(); // Alwina
-    if(skimClusterE()) {  // Fernando
+    getBeamProperties(event, esd_event, aod_event);
+    if (!skimMultiplicityTracklet(event)) { // skimMultiplicityTracklet returns true if we should keep the event
         return false;
     }
-    getMetadata(); // Alwina
+    if (skimClusterE()) {  // Fernando
+        return false;
+    }
+    getMetadata(esd_event, aod_event);
     getEmcalCellInfo(); // Fernando
     getPrimaryMCParticles(); // Rey
     initializeFastjetVectors();
@@ -377,7 +380,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
     skimJets();
     fillCellBranches(); // Fernando
     fillMuonBranches();
-    fillEgNtrial(); // Alwina
+    fillEgNtrial();
 
     _tree_event->Fill();
     return true;
@@ -392,7 +395,7 @@ bool AliAnalysisTaskNTGJ::getEvent(AliVEvent *&event,
                                    AliESDEvent *&esd_event,
                                    AliAODEvent *&aod_event)
 {
-    // lines 406-449 of original
+    // lines 406-432, 436-449
     event = InputEvent();
 
     if (event == NULL) {
@@ -420,8 +423,6 @@ bool AliAnalysisTaskNTGJ::getEvent(AliVEvent *&event,
         }
     }
 
-    alice_jec_t jec;
-
     _branch_run_number = event->GetRunNumber();
     _branch_period_number = event->GetPeriodNumber();
     _branch_orbit_number = event->GetOrbitNumber();
@@ -436,14 +437,6 @@ bool AliAnalysisTaskNTGJ::getEvent(AliVEvent *&event,
         esd_event->GetTriggerMaskNext50() :
         aod_event->GetTriggerMaskNext50();
     _branch_has_misalignment_matrix = false;
-
-    // lines 685-690 of original
-    if (esd_event != NULL) {
-        esd_event->InitMagneticField();
-    }
-    else if (aod_event != NULL) {
-        aod_event->InitMagneticField();
-    }
 
     return true;
 }
@@ -479,7 +472,65 @@ void AliAnalysisTaskNTGJ::setTrackCuts()
 
 void AliAnalysisTaskNTGJ::getMultiplicityCentralityEventPlane(AliVEvent *event)
 {
+    // lines 547-604
+    AliVVZERO *v0 = event->GetVZEROData();
 
+    if (v0 != NULL) {
+        for (size_t i = 0; i < 64; i++) {
+            _branch_multiplicity_v0[i] = v0->GetMultiplicity(i);
+        }
+    }
+
+    static const char *centrality_method[9] = {
+        "V0M", "CL0", "CL1",
+        "V0Mplus05", "V0Mplus10", "V0Mminus05", "V0Mminus10",
+        "SPDClustersCorr", "SPDTracklets"
+    };
+
+    AliMultSelection *mult_selection = static_cast<AliMultSelection *>
+        (event->FindListObject("MultSelection"));
+
+    std::fill(_branch_centrality,
+              _branch_centrality + sizeof(_branch_centrality) /
+              sizeof(*_branch_centrality), NAN);
+    if (mult_selection != NULL) {
+        for (size_t i = 0; i < 9; i++) {
+            _branch_centrality[i] =
+                mult_selection->GetMultiplicityPercentile(
+                    centrality_method[i]);
+        }
+    }
+    else {
+        AliCentrality *centrality = event->GetCentrality();
+
+        if (centrality != NULL) {
+            for (size_t i = 0; i < 9; i++) {
+                _branch_centrality[i] =
+                    centrality->GetCentralityPercentile(
+                        centrality_method[i]);
+            }
+        }
+    }
+    // Copy for easy cutting (where duplicated global variable are not
+    // very wasteful)
+    _branch_centrality_v0m = _branch_centrality[0];
+
+    std::fill(_branch_event_plane_psi_v0,
+              _branch_event_plane_psi_v0 +
+              sizeof(_branch_event_plane_psi_v0) /
+              sizeof(*_branch_event_plane_psi_v0), NAN);
+
+    AliEventplane *event_plane = event->GetEventplane();
+
+    if (event_plane != NULL) {
+        for (size_t i = 1; i < 4; i++) {
+            _branch_event_plane_psi_v0[i - 1] =
+                event->GetEventplane()->CalculateVZEROEventPlane(
+                    event, 10, i,
+                    _branch_event_plane_q_v0[i - 1][0],
+                    _branch_event_plane_q_v0[i - 1][1]);
+        }
+    }
 }
 
 void AliAnalysisTaskNTGJ::loadPhotonNNModel()
@@ -492,9 +543,148 @@ void AliAnalysisTaskNTGJ::loadMC()
 
 }
 
-void AliAnalysisTaskNTGJ::getBeamProperties()
+void AliAnalysisTaskNTGJ::getBeamProperties(AliVEvent *event,
+                                            AliESDEvent *esd_event,
+                                            AliAODEvent *aod_event)
 {
+    // lines 685-792
+    if (esd_event != NULL) {
+        esd_event->InitMagneticField();
+    }
+    else if (aod_event != NULL) {
+        aod_event->InitMagneticField();
+    }
 
+    getPrimaryVertex(event, esd_event);
+    getPrimaryVertexSPD(event, esd_event, aod_event);
+    getPileup(esd_event, aod_event);
+
+    _branch_event_selected = fInputHandler->IsEventSelected();
+}
+
+void AliAnalysisTaskNTGJ::getPrimaryVertex(AliVEvent *event,
+                                           AliESDEvent *esd_event)
+{
+    // lines 692-717
+    std::fill(_branch_primary_vertex,
+              _branch_primary_vertex +
+              sizeof(_branch_primary_vertex) /
+              sizeof(*_branch_primary_vertex), NAN);
+    std::fill(_branch_primary_vertex_sigma,
+              _branch_primary_vertex_sigma +
+              sizeof(_branch_primary_vertex_sigma) /
+              sizeof(*_branch_primary_vertex_sigma), NAN);
+    _branch_primary_vertex_ncontributor = INT_MIN;
+
+    const AliVVertex *primary_vertex = event->GetPrimaryVertex();
+
+    if (primary_vertex != NULL) {
+        primary_vertex->GetXYZ(_branch_primary_vertex);
+    }
+    if (esd_event != NULL) {
+        const AliESDVertex *esd_primary_vertex =
+            esd_event->GetPrimaryVertex();
+
+        if (esd_primary_vertex != NULL) {
+            esd_primary_vertex->GetSigmaXYZ(
+                _branch_primary_vertex_sigma);
+            _branch_primary_vertex_ncontributor =
+                esd_primary_vertex->GetNContributors();
+        }
+    }
+}
+
+void AliAnalysisTaskNTGJ::getPrimaryVertexSPD(AliVEvent *event,
+                                              AliESDEvent *esd_event,
+                                              AliAODEvent *aod_event)
+{
+    // lines 719-745
+    std::fill(_branch_primary_vertex_spd,
+              _branch_primary_vertex_spd +
+              sizeof(_branch_primary_vertex_spd) /
+              sizeof(*_branch_primary_vertex_spd), NAN);
+    std::fill(_branch_primary_vertex_spd_sigma,
+              _branch_primary_vertex_spd_sigma +
+              sizeof(_branch_primary_vertex_spd_sigma) /
+              sizeof(*_branch_primary_vertex_spd_sigma), NAN);
+    _branch_primary_vertex_spd_ncontributor = INT_MIN;
+
+    const AliVVertex *primary_vertex_spd =
+        event->GetPrimaryVertexSPD();
+
+    if (primary_vertex_spd != NULL) {
+        primary_vertex_spd->GetXYZ(_branch_primary_vertex_spd);
+    }
+    if (esd_event != NULL) {
+        const AliESDVertex *esd_primary_vertex_spd =
+            esd_event->GetPrimaryVertexSPD();
+
+        if (esd_primary_vertex_spd != NULL) {
+            esd_primary_vertex_spd->GetSigmaXYZ(
+                _branch_primary_vertex_spd_sigma);
+            _branch_primary_vertex_spd_ncontributor =
+                esd_primary_vertex_spd->GetNContributors();
+        }
+    }
+    else if (aod_event != NULL) {
+        // lines 762-770
+        const AliAODVertex *aod_primary_vertex_spd =
+            aod_event->GetPrimaryVertexSPD();
+
+        /*if (aod_primary_vertex_spd != NULL) {
+            aod_primary_vertex_spd->GetSigmaXYZ(
+                _branch_primary_vertex_spd_sigma);
+            _branch_primary_vertex_spd_ncontributor =
+                aod_primary_vertex_spd->GetNContributors();
+        }//*/
+    }
+}
+
+void AliAnalysisTaskNTGJ::getPileup(AliESDEvent *esd_event,
+                                    AliAODEvent *aod_event)
+{
+    // lines 747-761, 772-780
+    _branch_is_pileup_from_spd_3_08 = false;
+    _branch_is_pileup_from_spd_5_08 = false;
+    _branch_npileup_vertex_spd = INT_MIN;
+    _branch_ncluster_tpc = INT_MIN;
+    if (esd_event != NULL) {
+        _branch_is_pileup_from_spd_3_08 =
+            esd_event->IsPileupFromSPD(3, 0.8);
+        _branch_is_pileup_from_spd_5_08 =
+            esd_event->IsPileupFromSPD(5, 0.8);
+        _branch_npileup_vertex_spd =
+            esd_event->GetNumberOfPileupVerticesSPD();
+        _branch_ncluster_tpc =
+            esd_event->GetNumberOfTPCClusters();
+    }
+    else if (aod_event != NULL) {
+        _branch_is_pileup_from_spd_3_08 =
+            aod_event->IsPileupFromSPD(3, 0.8);
+        _branch_is_pileup_from_spd_5_08 =
+            aod_event->IsPileupFromSPD(5, 0.8);
+        _branch_npileup_vertex_spd =
+            aod_event->GetNumberOfPileupVerticesSPD();
+        _branch_ncluster_tpc =
+            aod_event->GetNumberOfTPCClusters();
+    }
+}
+
+bool AliAnalysisTaskNTGJ::skimMultiplicityTracklet(AliVEvent *event)
+{
+    // lines 784-792
+    // returns true if we should KEEP the event
+    if (_skim_multiplicity_tracklet_min_n > INT_MIN) {
+        AliVMultiplicity *multiplicity = event->GetMultiplicity();
+
+        if (multiplicity == NULL ||
+            !(multiplicity->GetNumberOfTracklets() >=
+              _skim_multiplicity_tracklet_min_n)) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 bool AliAnalysisTaskNTGJ::skimClusterE()
@@ -502,9 +692,72 @@ bool AliAnalysisTaskNTGJ::skimClusterE()
     return false;
 }
 
-void AliAnalysisTaskNTGJ::getMetadata()
+void AliAnalysisTaskNTGJ::getMetadata(AliESDEvent *esd_event,
+                                      AliAODEvent *aod_event)
 {
+    // line 434, moved here because it doesn't seem to be used anywhere else
+    alice_jec_t jec;
 
+    // lines 831-889
+    if (!_metadata_filled) {
+        // Use gitattributes ident mechanism to track the blob object
+        // name
+        strncpy(_branch_id_git, "$Id$", BUFSIZ);
+        _branch_id_git[BUFSIZ - 1] = '\0';
+        strncpy(_branch_version_jec, jec.version(), BUFSIZ);
+        _branch_version_jec[BUFSIZ - 1] = '\0';
+        if (esd_event != NULL) {
+            _branch_beam_energy = esd_event->GetBeamEnergy();
+            for (size_t i = 0; i < 2; i++) {
+                _branch_beam_particle[i] =
+                    esd_event->GetBeamParticle(i);
+            }
+
+            const AliESDRun *esd_run = esd_event->GetESDRun();
+
+            if (esd_run != NULL) {
+                _branch_trigger_class.clear();
+                for (size_t i = 0; i < NTRIGGER_CLASS_MAX; i++) {
+                    _branch_trigger_class.push_back(
+                        std::string(esd_run->GetTriggerClass(i)));
+                }
+            }
+        }
+        else if (aod_event != NULL) {
+            // FIXME: AOD not handled
+            _branch_beam_energy = NAN;
+            std::fill(_branch_beam_particle,
+                      _branch_beam_particle +
+                      sizeof(_branch_beam_particle) /
+                      sizeof(*_branch_beam_particle), 0);
+        }
+
+#ifdef WITH_EFP7
+        strncpy(_branch_debug_blas_version,
+                cblas.version_str().c_str(), BUFSIZ);
+#else // WITH_EFP7
+        _branch_debug_blas_version[0] = '\0';
+#endif // WITH_EFP7
+
+        _metadata_filled = true;
+    }
+    else {
+        // To make sure no space is wasted, set metadata in all
+        // subsequent events to empty
+        _branch_id_git[0] = '\0';
+        _branch_version_aliroot[0] = '\0';
+        _branch_version_aliphysics[0] = '\0';
+        _branch_version_jec[0] = '\0';
+        _branch_grid_data_dir[0] = '\0';
+        _branch_grid_data_pattern[0] = '\0';
+        std::fill(_branch_beam_particle,
+                  _branch_beam_particle +
+                  sizeof(_branch_beam_particle) /
+                  sizeof(*_branch_beam_particle), 0);
+        _branch_trigger_class.clear();
+
+        _branch_debug_blas_version[0] = '\0';
+    }
 }
 
 void AliAnalysisTaskNTGJ::getEmcalCellInfo()
@@ -611,7 +864,11 @@ void AliAnalysisTaskNTGJ::fillMuonBranches()
 
 void AliAnalysisTaskNTGJ::fillEgNtrial()
 {
-
+    // lines 2512-2515
+    // Now that the event is accepted, copy over the total counted
+    // ntrials so far, and reset the ntrial counter
+    _branch_eg_ntrial = _skim_sum_eg_ntrial;
+    _skim_sum_eg_ntrial = 0;
 }
 
 AliEMCALRecoUtils *AliAnalysisTaskNTGJ::GetEMCALRecoUtils(void)
