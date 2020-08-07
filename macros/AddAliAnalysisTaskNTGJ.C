@@ -145,7 +145,7 @@ AddAliAnalysisTaskNTGJ(TString name,
 
   // set to 2 to print number of clusters/tracks/MC particles
   // set to 3 to also print when entering various loops
-  // AliLog::SetClassDebugLevel("AliAnalysisTaskNTGJ", 2);
+  AliLog::SetClassDebugLevel("AliAnalysisTaskNTGJ", 2);
 
   // add cluster, track, and MC containers
   if (is_embed) {
