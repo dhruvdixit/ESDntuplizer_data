@@ -338,15 +338,21 @@ void AliAnalysisTaskNTGJ::UserCreateOutputObjects(void)
 
 Bool_t AliAnalysisTaskNTGJ::Run()
 {
+    AliVEvent *event = NULL;
+    AliESDEvent *esd_event = NULL;
+    AliAODEvent *aod_event = NULL;
+
     AliClusterContainer *cluster_container = NULL;
     std::vector<AliTrackContainer*> *track_containers = new std::vector<AliTrackContainer*>;
     AliMCParticleContainer *mc_container = NULL;
 
     loadEmcalGeometry(); // Fernando
-    getEvent(); // Alwina
+    if (!getEvent(event, esd_event, aod_event)) {
+        return false;
+    }
     getContainers(cluster_container, track_containers, mc_container);
     setTrackCuts(); // Dhruv
-    getMultiplicityCentralityEventPlane(); // Alwina
+    getMultiplicityCentralityEventPlane(event); // Alwina
     loadPhotonNNModel(); // Fernando
     loadMC(); // Preeti
     getBeamProperties(); // Alwina
@@ -382,15 +388,72 @@ void AliAnalysisTaskNTGJ::loadEmcalGeometry()
 
 }
 
-void AliAnalysisTaskNTGJ::getEvent()
+bool AliAnalysisTaskNTGJ::getEvent(AliVEvent *&event,
+                                   AliESDEvent *&esd_event,
+                                   AliAODEvent *&aod_event)
 {
+    // lines 406-449 of original
+    event = InputEvent();
 
+    if (event == NULL) {
+        return false;
+    }
+
+    if (event->GetRunNumber() != _run_number_current) {
+        _metadata_filled = false;
+        _run_number_current = event->GetRunNumber();
+        if (_muon_track_cut != NULL) {
+            _muon_track_cut->SetAllowDefaultParams(kTRUE);
+            _muon_track_cut->SetRun(
+                (AliInputEventHandler *)
+                ((AliAnalysisManager::GetAnalysisManager())->
+                 GetInputEventHandler()));
+        }
+    }
+
+    esd_event = dynamic_cast<AliESDEvent *>(event);
+
+    if (esd_event == NULL) {
+        aod_event = dynamic_cast<AliAODEvent *>(event);
+        if (aod_event == NULL) {
+            return false;
+        }
+    }
+
+    alice_jec_t jec;
+
+    _branch_run_number = event->GetRunNumber();
+    _branch_period_number = event->GetPeriodNumber();
+    _branch_orbit_number = event->GetOrbitNumber();
+    _branch_bunch_crossing_number = event->GetBunchCrossNumber();
+    _branch_time_stamp = esd_event != NULL ?
+        esd_event->GetTimeStamp() :
+        aod_event->GetTimeStamp();
+    _branch_trigger_mask[0] = esd_event != NULL ?
+        esd_event->GetTriggerMask() :
+        aod_event->GetTriggerMask();
+    _branch_trigger_mask[1] = esd_event != NULL ?
+        esd_event->GetTriggerMaskNext50() :
+        aod_event->GetTriggerMaskNext50();
+    _branch_has_misalignment_matrix = false;
+
+    // lines 685-690 of original
+    if (esd_event != NULL) {
+        esd_event->InitMagneticField();
+    }
+    else if (aod_event != NULL) {
+        aod_event->InitMagneticField();
+    }
+
+    return true;
 }
 
-void AliAnalysisTaskNTGJ::getContainers(AliClusterContainer *cluster_container,
-                                        std::vector<AliTrackContainer*> *track_containers,
-                                        AliMCParticleContainer *mc_container)
+void AliAnalysisTaskNTGJ::getContainers(AliClusterContainer *&cluster_container,
+                                        std::vector<AliTrackContainer*> *&track_containers,
+                                        AliMCParticleContainer *&mc_container)
 {
+    // set cluster_container, track_containers, and mc_container
+    // by taking in references to pointers
     cluster_container = GetClusterContainer(0);
     track_containers->push_back(GetTrackContainer(0));
     if (_is_embed) {
@@ -414,7 +477,7 @@ void AliAnalysisTaskNTGJ::setTrackCuts()
 
 }
 
-void AliAnalysisTaskNTGJ::getMultiplicityCentralityEventPlane()
+void AliAnalysisTaskNTGJ::getMultiplicityCentralityEventPlane(AliVEvent *event)
 {
 
 }

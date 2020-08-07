@@ -488,12 +488,14 @@ private:
     bool _metadata_filled; //!
 
     void loadEmcalGeometry();
-    void getEvent();
-    void getContainers(AliClusterContainer *cluster_container,
-                       std::vector<AliTrackContainer*> *track_containers,
-                       AliMCParticleContainer *mc_container);
+    bool getEvent(AliVEvent *&event,
+                  AliESDEvent *&esd_event,
+                  AliAODEvent *&aod_event);
+    void getContainers(AliClusterContainer *&cluster_container,
+                       std::vector<AliTrackContainer*> *&track_containers,
+                       AliMCParticleContainer *&mc_container);
     void setTrackCuts();
-    void getMultiplicityCentralityEventPlane();
+    void getMultiplicityCentralityEventPlane(AliVEvent *event);
     void loadPhotonNNModel();
     void loadMC();
     void getBeamProperties();
