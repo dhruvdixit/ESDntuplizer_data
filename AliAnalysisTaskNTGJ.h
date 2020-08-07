@@ -497,7 +497,7 @@ private:
     void loadPhotonNNModel();
     void loadMC();
     void getBeamProperties();
-    void skimClusterE();
+    bool skimClusterE();
     void getMetadata();
     void getEmcalCellInfo();
     void getPrimaryMCParticles();

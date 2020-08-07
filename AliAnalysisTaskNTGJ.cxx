@@ -342,34 +342,36 @@ Bool_t AliAnalysisTaskNTGJ::Run()
     std::vector<AliTrackContainer*> *track_containers = new std::vector<AliTrackContainer*>;
     AliMCParticleContainer *mc_container = NULL;
 
-    loadEmcalGeometry();
-    getEvent();
+    loadEmcalGeometry(); // Fernando
+    getEvent(); // Alwina
     getContainers(cluster_container, track_containers, mc_container);
-    setTrackCuts();
-    getMultiplicityCentralityEventPlane();
-    loadPhotonNNModel();
-    loadMC();
-    getBeamProperties();
-    skimClusterE();
-    getMetadata();
-    getEmcalCellInfo();
-    getPrimaryMCParticles();
+    setTrackCuts(); // Dhruv
+    getMultiplicityCentralityEventPlane(); // Alwina
+    loadPhotonNNModel(); // Fernando
+    loadMC(); // Preeti
+    getBeamProperties(); // Alwina
+    if(skimClusterE()) {  // Fernando
+        return false;
+    }
+    getMetadata(); // Alwina
+    getEmcalCellInfo(); // Fernando
+    getPrimaryMCParticles(); // Rey
     initializeFastjetVectors();
-    doTrackLoop();
+    doTrackLoop(); // Dhruv
     doClusterLoopForAreaDetermination();
     computeVoronoiAreas();
     initializeMoreFastjetVectors();
-    doMCParticleLoop();
+    doMCParticleLoop(); // Rey
     fastjetTruthJets();
     doClusterLoopForJets();
     doManyFastjetThings();
     getUEEstimate();
-    doClusterLoop();
+    doClusterLoop(); // Fernando, except isolation stuff
     fillJetBranches();
     skimJets();
-    fillCellBranches();
+    fillCellBranches(); // Fernando
     fillMuonBranches();
-    fillEgNtrial();
+    fillEgNtrial(); // Alwina
 
     _tree_event->Fill();
     return true;
@@ -432,9 +434,9 @@ void AliAnalysisTaskNTGJ::getBeamProperties()
 
 }
 
-void AliAnalysisTaskNTGJ::skimClusterE()
+bool AliAnalysisTaskNTGJ::skimClusterE()
 {
-
+    return false;
 }
 
 void AliAnalysisTaskNTGJ::getMetadata()
