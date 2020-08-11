@@ -497,7 +497,7 @@ private:
     void setTrackCuts();
     void getMultiplicityCentralityEventPlane(AliVEvent *event);
     void loadPhotonNNModel();
-    void loadMC();
+    void loadMC(AliAODEvent *aod_event);
     void getBeamProperties(AliVEvent *event,
                            AliESDEvent *esd_event,
                            AliAODEvent *aod_event);
