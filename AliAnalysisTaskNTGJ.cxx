@@ -354,7 +354,11 @@ Bool_t AliAnalysisTaskNTGJ::Run()
     setTrackCuts(); // Dhruv
     getMultiplicityCentralityEventPlane(event);
     loadPhotonNNModel(); // Fernando
-    loadMC(); // Preeti
+    
+    if (mc_container) {
+        loadMC(aod_event); // Preeti
+    }
+    
     getBeamProperties(event, esd_event, aod_event);
     if (!skimMultiplicityTracklet(event)) { // skimMultiplicityTracklet returns true if we should keep the event
         return false;
@@ -538,8 +542,75 @@ void AliAnalysisTaskNTGJ::loadPhotonNNModel()
 
 }
 
-void AliAnalysisTaskNTGJ::loadMC()
+void AliAnalysisTaskNTGJ::loadMC(AliAODEvent *aod_event)
 {
+    
+    _branch_eg_signal_process_id = INT_MIN;
+    _branch_eg_mpi = INT_MIN;
+    _branch_eg_pt_hat = NAN;
+    _branch_eg_cross_section = NAN;
+    _branch_eg_weight = NAN;
+    // This should be default to zero to avoid counting mishap
+    _branch_eg_ntrial = 0;
+
+    _branch_eg_scale_pdf = NAN;
+    _branch_eg_alpha_qcd = NAN;
+    _branch_eg_alpha_qed = NAN;
+    std::fill(_branch_eg_pdf_id,
+              _branch_eg_pdf_id + sizeof(_branch_eg_pdf_id) /
+              sizeof(*_branch_eg_pdf_id), INT_MIN);
+    std::fill(_branch_eg_pdf_x,
+              _branch_eg_pdf_x + sizeof(_branch_eg_pdf_x) /
+              sizeof(*_branch_eg_pdf_x), NAN);
+    std::fill(_branch_eg_pdf_x_pdf,
+              _branch_eg_pdf_x_pdf + sizeof(_branch_eg_pdf_x_pdf) /
+              sizeof(*_branch_eg_pdf_x_pdf), NAN);
+
+
+
+     AliGenPythiaEventHeader *mc_truth_pythia_header = NULL;
+
+        // embedding MC header is done separately for now
+        if (_is_embed) {
+                mc_truth_pythia_header = AliAnalysisTaskEmcalEmbeddingHelper::GetInstance()->GetPythiaHeader();
+        }
+
+        else {
+                AliAODMCHeader *aod_mc_header = dynamic_cast<AliAODMCHeader*>
+                (aod_event->GetList()->FindObject(AliAODMCHeader::StdBranchName()));
+
+            Int_t nGenerators = aod_mc_header->GetNCocktailHeaders();
+            for (Int_t igen = 0; igen < nGenerators; igen++) {
+                AliGenEventHeader *eventHeaderGen = aod_mc_header->GetCocktailHeader(igen);
+                TString name = eventHeaderGen->GetName();
+
+                if (name.CompareTo("Pythia") == 0) {
+                    mc_truth_pythia_header = dynamic_cast<AliGenPythiaEventHeader*>(eventHeaderGen);
+                }
+            }
+        }
+
+        if (mc_truth_pythia_header != NULL) {
+            _branch_eg_weight = mc_truth_pythia_header->EventWeight();
+
+            TArrayF eg_primary_vertex(3);
+
+            mc_truth_pythia_header->PrimaryVertex(eg_primary_vertex);
+            for (Int_t i = 0; i < 3; i++) {
+                _branch_eg_primary_vertex[i] = eg_primary_vertex.At(i);
+            }
+
+            _branch_eg_signal_process_id = mc_truth_pythia_header->ProcessType();
+            _branch_eg_mpi = mc_truth_pythia_header->GetNMPI();
+            _branch_eg_pt_hat = mc_truth_pythia_header->GetPtHard();
+                
+            _branch_eg_cross_section =  mc_truth_pythia_header->GetXsection();
+               
+            // Count ntrial, because the event might get skimmed away
+            // by the ntuplizer
+            _skim_sum_eg_ntrial += mc_truth_pythia_header->Trials();
+                
+        }
 
 }
 
