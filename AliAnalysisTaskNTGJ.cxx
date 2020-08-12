@@ -346,24 +346,24 @@ Bool_t AliAnalysisTaskNTGJ::Run()
 	std::vector<AliTrackContainer*> *track_containers = new std::vector<AliTrackContainer*>;
 	AliMCParticleContainer *mc_container = NULL;
 
-	loadEmcalGeometry(); // Fernando [testing]
-	if (!getEvent(event, esd_event, aod_event)) { // getEvent returns false if the event is null
-		return false;
-	}
-	getContainers(cluster_container, track_containers, mc_container);
-	setTrackCuts(); // Dhruv
-	getMultiplicityCentralityEventPlane(event);
-	loadPhotonNNModel(); // Fernando [testing]
-
-	if (mc_container) {
-		loadMC(aod_event);
-	}
-
-	getBeamProperties(event, esd_event, aod_event);
-	if (!skimMultiplicityTracklet(event)) { // skimMultiplicityTracklet returns true if we should keep the event
-		return false;
-	}
-    if (!skimClusterE(cluster_container)) {  //Fernando: skimClusterE returns true if we should keep event [testing]
+    loadEmcalGeometry(); // Fernando 
+    if (!getEvent(event, esd_event, aod_event)) { // getEvent returns false if the event is null
+        return false;
+    }
+    getContainers(cluster_container, track_containers, mc_container);
+    setTrackCuts(); // Dhruv
+    getMultiplicityCentralityEventPlane(event);
+    loadPhotonNNModel(); // Fernando 
+    
+    if (mc_container) {
+        loadMC(aod_event); // Preeti
+    }
+    
+    getBeamProperties(event, esd_event, aod_event);
+    if (!skimMultiplicityTracklet(event)) { // skimMultiplicityTracklet returns true if we should keep the event
+        return false;
+    }
+    if (!skimClusterE(cluster_container)) {  //Fernando: skimClusterE returns true if we should keep event 
       return false; 
     }
 	getMetadata(esd_event, aod_event);
@@ -399,7 +399,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
     doClusterLoop(); // Fernando, except isolation stuff [lol]
     fillJetBranches();
     skimJets();
-    fillCellBranches(); // Fernando [Testing]
+    fillCellBranches(); // Fernando 
     fillMuonBranches();
     fillEgNtrial();
 
