@@ -346,14 +346,14 @@ Bool_t AliAnalysisTaskNTGJ::Run()
 	std::vector<AliTrackContainer*> *track_containers = new std::vector<AliTrackContainer*>;
 	AliMCParticleContainer *mc_container = NULL;
 
-	loadEmcalGeometry(); // Fernando
+	loadEmcalGeometry(); // Fernando [testing]
 	if (!getEvent(event, esd_event, aod_event)) { // getEvent returns false if the event is null
 		return false;
 	}
 	getContainers(cluster_container, track_containers, mc_container);
 	setTrackCuts(); // Dhruv
 	getMultiplicityCentralityEventPlane(event);
-	loadPhotonNNModel(); // Fernando
+	loadPhotonNNModel(); // Fernando [testing]
 
 	if (mc_container) {
 		loadMC(aod_event);
@@ -363,9 +363,9 @@ Bool_t AliAnalysisTaskNTGJ::Run()
 	if (!skimMultiplicityTracklet(event)) { // skimMultiplicityTracklet returns true if we should keep the event
 		return false;
 	}
-	if (skimClusterE()) {  // Fernando
-		return false;
-	}
+    if (!skimClusterE(cluster_container)) {  //Fernando: skimClusterE returns true if we should keep event [testing]
+      return false; 
+    }
 	getMetadata(esd_event, aod_event);
 	getEmcalCellInfo(); // Fernando
 
@@ -396,20 +396,84 @@ Bool_t AliAnalysisTaskNTGJ::Run()
 	doClusterLoopForJets();
 	doManyFastjetThings();
 	getUEEstimate();
-	doClusterLoop(); // Fernando, except isolation stuff
-	fillJetBranches();
-	skimJets();
-	fillCellBranches(); // Fernando
-	fillMuonBranches();
-	fillEgNtrial();
+    doClusterLoop(); // Fernando, except isolation stuff [lol]
+    fillJetBranches();
+    skimJets();
+    fillCellBranches(); // Fernando [Testing]
+    fillMuonBranches();
+    fillEgNtrial();
 
-	_tree_event->Fill();
-	return true;
+    _tree_event->Fill();
+    return true;
 }
 
 void AliAnalysisTaskNTGJ::loadEmcalGeometry()
 {
 
+  if (!_emcal_geometry_filename.empty() &&
+      !_emcal_local2master_filename.empty() &&
+      _emcal_geometry == NULL) {
+    if (!gSystem->
+	AccessPathName(gSystem->ExpandPathName(
+		       _emcal_geometry_filename.c_str()))) 
+      {
+	TGeoManager::Import(_emcal_geometry_filename.c_str());
+	_emcal_geometry = AliEMCALGeometry::
+	  GetInstance(_emcal_geometry_name);
+      }
+    
+    AliOADBContainer emcal_geometry_container("emcal");
+
+    if (!gSystem->AccessPathName(gSystem->ExpandPathName(
+	_emcal_local2master_filename.c_str()))) 
+      {
+
+	emcal_geometry_container.
+	  InitFromFile(_emcal_local2master_filename.c_str(),"AliEMCALgeo");
+      }
+
+    TObjArray *geometry_matrix = dynamic_cast<TObjArray *>(
+				 emcal_geometry_container.GetObject(
+			         _branch_run_number, "EmcalMatrices"));
+
+    if (_emcal_geometry != NULL && geometry_matrix != NULL) {
+      const Int_t nsm = _emcal_geometry->GetEMCGeometry()->
+	GetNumberOfSuperModules();
+
+      for (Int_t sm = 0; sm < nsm; sm++) {
+
+	_emcal_geometry->SetMisalMatrix(
+			 dynamic_cast<TGeoHMatrix *>(
+			 geometry_matrix->At(sm)),sm);
+      }
+      _branch_has_misalignment_matrix = true;
+    }
+  }
+
+  if (_emcal_mask.size() != EMCAL_NCELL) {
+    _emcal_mask.resize(EMCAL_NCELL);
+#if 0 // Keep = 1 to for an actual EMCAL mask (and not all channels
+      // turned on)
+    for (unsigned int i = 0; i < EMCAL_NCELL; i++) {
+      _emcal_mask[i] = inside_edge(i, 1);
+    }
+    // #include "bad_channel.h"
+    for (unsigned int i = 0; bad_channel_emcal[i] != -1; i++) {
+      if (inside_edge(bad_channel_emcal[i], 1)) {
+	unsigned int bad_cell_3_3[9];
+
+	cell_3_3(bad_cell_3_3, bad_channel_emcal[i]);
+	for (size_t j = 0; j < 9; j++) {
+	  _emcal_mask[bad_cell_3_3[j]] = false;
+	}
+      }
+    }
+#else
+    for (unsigned int i = 0; i < EMCAL_NCELL; i++) {
+      _emcal_mask[i] = true;
+    }
+#endif
+  }
 }
 
 bool AliAnalysisTaskNTGJ::getEvent(AliVEvent *&event,
@@ -556,7 +620,12 @@ void AliAnalysisTaskNTGJ::getMultiplicityCentralityEventPlane(AliVEvent *event)
 
 void AliAnalysisTaskNTGJ::loadPhotonNNModel()
 {
-
+  if (_keras_model_photon_discrimination == NULL) {
+    _keras_model_photon_discrimination = new KerasModel;
+    reinterpret_cast<KerasModel *>(
+      _keras_model_photon_discrimination)->
+      LoadModel("photon_discr.model");
+  }
 }
 
 void AliAnalysisTaskNTGJ::loadMC(AliAODEvent *aod_event)
@@ -770,9 +839,31 @@ bool AliAnalysisTaskNTGJ::skimMultiplicityTracklet(AliVEvent *event)
 	return true;
 }
 
-bool AliAnalysisTaskNTGJ::skimClusterE()
+bool AliAnalysisTaskNTGJ::skimClusterE(AliClusterContainer *calo_cluster)
 {
-	return false;
+  if (_skim_cluster_min_e > -INFINITY) {
+    double cluster_e_max = -INFINITY;
+
+    for (Int_t i = 0; i < calo_cluster->GetNEntries(); i++) {
+            AliVCluster *c =
+	      static_cast<AliVCluster *>(calo_cluster->GetCluster(i));
+
+            if (!(c->GetNCells() > 1) ||
+                cell_masked(c, _emcal_mask)) {
+	      continue;
+            }
+
+            TLorentzVector p;
+
+            c->GetMomentum(p, _branch_primary_vertex);
+            cluster_e_max = std::max(cluster_e_max, p.E());
+    }
+    if (!(cluster_e_max >= _skim_cluster_min_e)) {
+      // Discard this event
+      return false;
+    }
+  }
+  return true; //if no min_e set, return true to keep event
 }
 
 void AliAnalysisTaskNTGJ::getMetadata(AliESDEvent *esd_event,
@@ -1128,6 +1219,57 @@ void AliAnalysisTaskNTGJ::skimJets()
 
 void AliAnalysisTaskNTGJ::fillCellBranches()
 {
+  std::fill(&_branch_cell_position[0][0],
+              &_branch_cell_position[0][0] +
+	    sizeof(_branch_cell_position) /
+	    sizeof(_branch_cell_position[0][0]), NAN);
+  std::fill(_branch_cell_voronoi_area,
+              _branch_cell_voronoi_area +
+	    sizeof(_branch_cell_voronoi_area) /
+	    sizeof(*_branch_cell_voronoi_area), NAN);
+  if (_emcal_geometry != NULL) {
+    _emcal_cell_position = new std::vector<point_2d_t>();
+    for (unsigned int cell_id = 0; cell_id < EMCAL_NCELL;
+	 cell_id++) {
+      TVector3 v;
+
+      _emcal_geometry->GetGlobal(cell_id, v);
+      v -= TVector3(_branch_primary_vertex);
+
+      _branch_cell_position[cell_id][0] = v.X();
+      _branch_cell_position[cell_id][1] = v.Y();
+      _branch_cell_position[cell_id][2] = v.Z();
+      reinterpret_cast<std::vector<point_2d_t> *>
+	(_emcal_cell_position)->push_back(
+	    point_2d_t(v.Eta(), v.Phi()));
+    }
+    //FIXME: check to see if "computeVoronoiAreas" is just for jet area (is likeley)
+    std::vector<double> emcal_cell_area;
+    std::vector<std::set<size_t> > emcal_cell_incident;
+
+    voronoi_area_incident(emcal_cell_area, emcal_cell_incident,
+			  *reinterpret_cast<std::vector<point_2d_t> *>
+			  (_emcal_cell_position));
+
+    double sum_area_inside = 0;
+    size_t count_inside = 0;
+
+    for (int cell_id = 0; cell_id < EMCAL_NCELL; cell_id++) {
+      if (inside_edge(cell_id, 1)) {
+	sum_area_inside += emcal_cell_area[cell_id];
+	count_inside++;
+      }
+    }
+
+        const double mean_area_inside =
+	  sum_area_inside / count_inside;
+	
+        for (int cell_id = 0; cell_id < EMCAL_NCELL; cell_id++) {
+            _branch_cell_voronoi_area[cell_id] =
+	      inside_edge(cell_id, 1) ?
+	      emcal_cell_area[cell_id] : mean_area_inside;
+        }
+  }
 
 }
 
