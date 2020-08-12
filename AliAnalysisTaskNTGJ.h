@@ -509,7 +509,7 @@ private:
     void getPileup(AliESDEvent *esd_event,
                    AliAODEvent *aod_event);
     bool skimMultiplicityTracklet(AliVEvent *event);
-    bool skimClusterE();
+    bool skimClusterE(AliClusterContainer *calo_cluster);
     void getMetadata(AliESDEvent *esd_event,
                      AliAODEvent *aod_event);
     void getEmcalCellInfo();
