@@ -356,7 +356,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
 	loadPhotonNNModel(); // Fernando
 
 	if (mc_container) {
-		loadMC(aod_event); // Preeti
+		loadMC(aod_event);
 	}
 
 	getBeamProperties(event, esd_event, aod_event);
@@ -375,9 +375,9 @@ Bool_t AliAnalysisTaskNTGJ::Run()
 
 	if (mc_container) {
 		getPrimaryMCParticles(mc_container,
-				stored_mc_truth_index,
-				reverse_stored_mc_truth_index,
-				reverse_stored_parton_algorithmic_index); // Rey
+				              &stored_mc_truth_index,
+                              &reverse_stored_mc_truth_index,
+                              &reverse_stored_parton_algorithmic_index); // Rey
 	}
 
 	initializeFastjetVectors();
@@ -388,8 +388,8 @@ Bool_t AliAnalysisTaskNTGJ::Run()
 
 	if (mc_container) {
 		doMCParticleLoop(mc_container,
-				esd_event,
-				reverse_stored_mc_truth_index); // Rey
+				         esd_event,
+				         reverse_stored_mc_truth_index); // Rey
 	}
 
 	fastjetTruthJets();
@@ -561,7 +561,7 @@ void AliAnalysisTaskNTGJ::loadPhotonNNModel()
 
 void AliAnalysisTaskNTGJ::loadMC(AliAODEvent *aod_event)
 {
-
+	// lines 616-683
 	_branch_eg_signal_process_id = INT_MIN;
 	_branch_eg_mpi = INT_MIN;
 	_branch_eg_pt_hat = NAN;
@@ -583,15 +583,12 @@ void AliAnalysisTaskNTGJ::loadMC(AliAODEvent *aod_event)
 			_branch_eg_pdf_x_pdf + sizeof(_branch_eg_pdf_x_pdf) /
 			sizeof(*_branch_eg_pdf_x_pdf), NAN);
 
-
-
 	AliGenPythiaEventHeader *mc_truth_pythia_header = NULL;
 
 	// embedding MC header is done separately for now
 	if (_is_embed) {
 		mc_truth_pythia_header = AliAnalysisTaskEmcalEmbeddingHelper::GetInstance()->GetPythiaHeader();
 	}
-
 	else {
 		AliAODMCHeader *aod_mc_header = dynamic_cast<AliAODMCHeader*>
 			(aod_event->GetList()->FindObject(AliAODMCHeader::StdBranchName()));
@@ -626,9 +623,7 @@ void AliAnalysisTaskNTGJ::loadMC(AliAODEvent *aod_event)
 		// Count ntrial, because the event might get skimmed away
 		// by the ntuplizer
 		_skim_sum_eg_ntrial += mc_truth_pythia_header->Trials();
-
 	}
-
 }
 
 void AliAnalysisTaskNTGJ::getBeamProperties(AliVEvent *event,
@@ -854,26 +849,27 @@ void AliAnalysisTaskNTGJ::getEmcalCellInfo()
 }
 // =================================================================================================================
 void AliAnalysisTaskNTGJ::getPrimaryMCParticles(AliMCParticleContainer *mc_container,
-                                                std::vector<size_t> stored_mc_truth_index,
-                                                std::vector<Int_t> reverse_stored_mc_truth_index,
-                                                std::vector<Int_t> reverse_stored_parton_algorithmic_index)
+                                                std::vector<size_t> *stored_mc_truth_index,
+                                                std::vector<Int_t> *reverse_stored_mc_truth_index,
+                                                std::vector<Int_t> *reverse_stored_parton_algorithmic_index)
 {
+	// lines 948-998
     AliDebugStream(3) << "loops 1 and 2 through MC container" << std::endl;
 
-	stored_mc_truth_index.resize(mc_container->GetNParticles(), ULONG_MAX);
+	stored_mc_truth_index->resize(mc_container->GetNParticles(), ULONG_MAX);
 	size_t nmc_truth = 0;
 	for (Int_t i = 0; i < mc_container->GetNParticles(); i++) {
 		// Bookkeeping for primary final state particles
 		if (final_state_primary(mc_container, i)) {
-			stored_mc_truth_index[i] = nmc_truth;
-			reverse_stored_mc_truth_index.push_back(i);
+			stored_mc_truth_index->at(i) = nmc_truth;
+			reverse_stored_mc_truth_index->push_back(i);
 			nmc_truth++;
 		}
 
 
 		// Bookkeeping for partons
 		if (parton_cms_algorithmic(mc_container, i)) {
-			reverse_stored_parton_algorithmic_index.push_back(i);
+			reverse_stored_parton_algorithmic_index->push_back(i);
 		}
 	}
 
@@ -905,7 +901,7 @@ void AliAnalysisTaskNTGJ::getPrimaryMCParticles(AliMCParticleContainer *mc_conta
 			}
 		}
 		if (has_physical_primary_ancestor) {
-			stored_mc_truth_index[i] = stored_mc_truth_index[j];
+			stored_mc_truth_index->at(i) = stored_mc_truth_index->at(j);
 		}
 	}	
 }
@@ -939,6 +935,7 @@ void AliAnalysisTaskNTGJ::doMCParticleLoop(AliMCParticleContainer *mc_container,
                                            AliESDEvent *esd_event,
                                            std::vector<Int_t> reverse_stored_mc_truth_index)
 {
+    // lines 1336-1376, 1406-1474
     AliDebugStream(3) << "loop 3 through MC container" << std::endl;
 
     enum {
@@ -951,6 +948,9 @@ void AliAnalysisTaskNTGJ::doMCParticleLoop(AliMCParticleContainer *mc_container,
         !(esd_event->GetBeamParticle(0) == BEAM_PARTICLE_P &&
                 esd_event->GetBeamParticle(1) == BEAM_PARTICLE_P) :
         false;
+
+    // may need to move this outside of this function
+    _branch_nmc_truth = 0;
 
 	enum {
 		PDG_CODE_ELECTRON_MINUS             = 11,
