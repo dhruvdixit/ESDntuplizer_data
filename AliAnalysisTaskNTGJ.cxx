@@ -373,7 +373,6 @@ Bool_t AliAnalysisTaskNTGJ::Run()
 	std::vector<Int_t> reverse_stored_mc_truth_index;
 	std::vector<Int_t> reverse_stored_parton_algorithmic_index;
 
-	AliDebugStream(3) << "loops 1 and 2 through MC container" << std::endl;
 	if (mc_container) {
 		getPrimaryMCParticles(mc_container,
 				stored_mc_truth_index,
@@ -387,27 +386,10 @@ Bool_t AliAnalysisTaskNTGJ::Run()
 	computeVoronoiAreas();
 	initializeMoreFastjetVectors();
 
-	enum {
-		BEAM_PARTICLE_P = 1001
-	};
-
-	const bool subtract_ue =
-		_force_ue_subtraction ? true :
-		esd_event != NULL ?
-		!(esd_event->GetBeamParticle(0) == BEAM_PARTICLE_P &&
-				esd_event->GetBeamParticle(1) == BEAM_PARTICLE_P) :
-		false;
-
-	std::vector<fastjet::PseudoJet> particle_truth;
-	std::vector<fastjet::PseudoJet> particle_charged_truth;
-
-	AliDebugStream(3) << "loop 3 through MC container" << std::endl;
 	if (mc_container) {
 		doMCParticleLoop(mc_container,
-				reverse_stored_mc_truth_index,
-				subtract_ue,
-				particle_truth,
-				particle_charged_truth); // Rey
+				esd_event,
+				reverse_stored_mc_truth_index); // Rey
 	}
 
 	fastjetTruthJets();
@@ -871,9 +853,13 @@ void AliAnalysisTaskNTGJ::getEmcalCellInfo()
 
 }
 // =================================================================================================================
-void AliAnalysisTaskNTGJ::getPrimaryMCParticles(AliMCParticleContainer *&mc_container,std::vector<size_t> stored_mc_truth_index,
-		std::vector<Int_t> reverse_stored_mc_truth_index,std::vector<Int_t> reverse_stored_parton_algorithmic_index)
-{       
+void AliAnalysisTaskNTGJ::getPrimaryMCParticles(AliMCParticleContainer *mc_container,
+                                                std::vector<size_t> stored_mc_truth_index,
+                                                std::vector<Int_t> reverse_stored_mc_truth_index,
+                                                std::vector<Int_t> reverse_stored_parton_algorithmic_index)
+{
+    AliDebugStream(3) << "loops 1 and 2 through MC container" << std::endl;
+
 	stored_mc_truth_index.resize(mc_container->GetNParticles(), ULONG_MAX);
 	size_t nmc_truth = 0;
 	for (Int_t i = 0; i < mc_container->GetNParticles(); i++) {
@@ -949,9 +935,23 @@ void AliAnalysisTaskNTGJ::initializeMoreFastjetVectors()
 
 }
 // ================================================================================================================= 
-void AliAnalysisTaskNTGJ::doMCParticleLoop(AliMCParticleContainer *&mc_container,std::vector<Int_t> reverse_stored_mc_truth_index,const bool subtract_ue,
-		std::vector<fastjet::PseudoJet> particle_truth, std::vector<fastjet::PseudoJet> particle_charged_truth)
+void AliAnalysisTaskNTGJ::doMCParticleLoop(AliMCParticleContainer *mc_container,
+                                           AliESDEvent *esd_event,
+                                           std::vector<Int_t> reverse_stored_mc_truth_index)
 {
+    AliDebugStream(3) << "loop 3 through MC container" << std::endl;
+
+    enum {
+        BEAM_PARTICLE_P = 1001
+    };
+
+    const bool subtract_ue =
+        _force_ue_subtraction ? true :
+        esd_event != NULL ?
+        !(esd_event->GetBeamParticle(0) == BEAM_PARTICLE_P &&
+                esd_event->GetBeamParticle(1) == BEAM_PARTICLE_P) :
+        false;
+
 	enum {
 		PDG_CODE_ELECTRON_MINUS             = 11,
 		PDG_CODE_ELECTRON_NEUTRINO          = 12,
@@ -1001,41 +1001,13 @@ void AliAnalysisTaskNTGJ::doMCParticleLoop(AliMCParticleContainer *&mc_container
 					// jet definition
 					break;
 				default:
-					particle_truth.push_back(fastjet::PseudoJet(
-								p->Px(), p->Py(), p->Pz(), p->P()));
-					switch (abs_pdg_code) {
-						case PDG_CODE_ELECTRON_MINUS:
-						case PDG_CODE_PHOTON:
-							particle_truth.back().
-								set_user_index(USER_INDEX_EM);
-							break;
-						case PDG_CODE_MUON_MINUS:
-							particle_truth.back().
-								set_user_index(USER_INDEX_MUON);
-							break;
-					}
-					// Fill again for charged particle
-					if (p->Charge() != 0) {
-						particle_charged_truth.push_back(fastjet::PseudoJet(
-									p->Px(), p->Py(), p->Pz(), p->P()));
-						switch (abs_pdg_code) {
-							case PDG_CODE_ELECTRON_MINUS:
-							case PDG_CODE_PHOTON:
-								particle_charged_truth.back().
-									set_user_index(USER_INDEX_EM);
-								break;
-							case PDG_CODE_MUON_MINUS:
-								particle_charged_truth.back().
-									set_user_index(USER_INDEX_MUON);
-								break;
-						}
-					}
 					kahan_sum(_branch_met_truth[0],
 							met_truth_kahan_error[0], p->Px());
 					kahan_sum(_branch_met_truth[1],
 							met_truth_kahan_error[1], p->Py());
 			}
 		}
+
 		_branch_mc_truth_e[_branch_nmc_truth] = half(p->E());
 		_branch_mc_truth_pt[_branch_nmc_truth] = half(p->Pt());
 		_branch_mc_truth_eta[_branch_nmc_truth] = half(p->Eta());

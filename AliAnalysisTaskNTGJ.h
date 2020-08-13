@@ -17,8 +17,6 @@
 #include <AliAnalysisTaskEmcal.h>
 #include <AliAnalysisAlien.h>
 
-#include <fastjet/PseudoJet.hh>
-
 #define EMCAL_NCELL         17664
 #define NTRIGGER_CLASS_MAX  100 // = AliESDRun::kNTriggerClasses
 
@@ -515,15 +513,18 @@ private:
     void getMetadata(AliESDEvent *esd_event,
                      AliAODEvent *aod_event);
     void getEmcalCellInfo();
-    void getPrimaryMCParticles(AliMCParticleContainer *&mc_container,std::vector<size_t> stored_mc_truth_index,
-		std::vector<Int_t> reverse_stored_mc_truth_index,std::vector<Int_t> reverse_stored_parton_algorithmic_index);
+    void getPrimaryMCParticles(AliMCParticleContainer *mc_container,
+                               std::vector<size_t> stored_mc_truth_index,
+                               std::vector<Int_t> reverse_stored_mc_truth_index,
+                               std::vector<Int_t> reverse_stored_parton_algorithmic_index);
     void initializeFastjetVectors();
     void doTrackLoop();
     void doClusterLoopForAreaDetermination();
     void computeVoronoiAreas();
     void initializeMoreFastjetVectors();
-    void doMCParticleLoop(AliMCParticleContainer *&mc_container,std::vector<Int_t> reverse_stored_mc_truth_index,
-		const bool subtract_ue,std::vector<fastjet::PseudoJet> particle_truth, std::vector<fastjet::PseudoJet> particle_charged_truth);
+    void doMCParticleLoop(AliMCParticleContainer *mc_container,
+                          AliESDEvent *esd_event,
+                          std::vector<Int_t> reverse_stored_mc_truth_index);
     void fastjetTruthJets();
     void doClusterLoopForJets();
     void doManyFastjetThings();
