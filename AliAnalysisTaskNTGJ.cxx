@@ -336,6 +336,21 @@ void AliAnalysisTaskNTGJ::UserCreateOutputObjects(void)
 
 #undef MEMBER_BRANCH
 
+// lines 1138-1160; not sure where else to put this
+// but it does seem to care about stored_mc_truth_index
+// so it probably has to be after that's been set
+#define SAFE_MC_TRUTH_INDEX_TO_USHRT(mc_truth_index)\
+    !(mc_truth_index >= 0 &&                        \
+      static_cast<size_t>(mc_truth_index) <         \
+      stored_mc_truth_index.size()) ? USHRT_MAX :   \
+        stored_mc_truth_index[mc_truth_index] ==    \
+        ULONG_MAX ?                                 \
+        USHRT_MAX :                                 \
+        std::min(static_cast<size_t>(USHRT_MAX),    \
+                 std::max(static_cast<size_t>(0),   \
+                          stored_mc_truth_index     \
+                          [mc_truth_index]));
+
 Bool_t AliAnalysisTaskNTGJ::Run()
 {
     AliVEvent *event = NULL;
@@ -350,6 +365,8 @@ Bool_t AliAnalysisTaskNTGJ::Run()
     if (!getEvent(event, esd_event, aod_event)) { // getEvent returns false if the event is null
         return false;
     }
+
+    AliVCaloCells *emcal_cell = event->GetEMCALCells();
     getContainers(cluster_container, track_containers, mc_container);
     setTrackCuts(); // Dhruv
     getMultiplicityCentralityEventPlane(event);
@@ -382,21 +399,6 @@ Bool_t AliAnalysisTaskNTGJ::Run()
                               &reverse_stored_parton_algorithmic_index);
     }
 
-// lines 1138-1160; not sure where else to put this
-// but it does seem to care about stored_mc_truth_index
-// so it probably has to be after that's been set
-#define SAFE_MC_TRUTH_INDEX_TO_USHRT(mc_truth_index)\
-    !(mc_truth_index >= 0 &&                        \
-      static_cast<size_t>(mc_truth_index) <         \
-      stored_mc_truth_index.size()) ? USHRT_MAX :   \
-        stored_mc_truth_index[mc_truth_index] ==    \
-        ULONG_MAX ?                                 \
-        USHRT_MAX :                                 \
-        std::min(static_cast<size_t>(USHRT_MAX),    \
-                 std::max(static_cast<size_t>(0),   \
-                          stored_mc_truth_index     \
-                          [mc_truth_index]));
-
     initializeFastjetVectors();
     doTrackLoop(); // Dhruv
     doClusterLoopForAreaDetermination();
@@ -416,12 +418,9 @@ Bool_t AliAnalysisTaskNTGJ::Run()
     doClusterLoop(); // Fernando, except isolation stuff [lol]
     fillJetBranches();
     skimJets();
-    fillCellBranches();
+    fillCellBranches(emcal_cell, stored_mc_truth_index);
     fillMuonBranches();
     fillEgNtrial();
-
-// line 2419; again, not sure where to put this
-#undef SAFE_MC_TRUTH_INDEX_TO_USHRT
 
     _tree_event->Fill();
     return true;
@@ -1235,7 +1234,8 @@ void AliAnalysisTaskNTGJ::skimJets()
 
 }
 
-void AliAnalysisTaskNTGJ::fillCellBranches()
+void AliAnalysisTaskNTGJ::fillCellBranches(AliVCaloCells *emcal_cell,
+                                           std::vector<size_t> stored_mc_truth_index)
 {
     // lines 891-942, 2389-2417
     std::fill(&_branch_cell_position[0][0],
@@ -1305,6 +1305,7 @@ void AliAnalysisTaskNTGJ::fillCellBranches()
               _branch_cell_mc_truth_index +
               sizeof(_branch_cell_mc_truth_index) /
               sizeof(*_branch_cell_mc_truth_index), USHRT_MAX);
+
     for (Short_t i = 0; i < emcal_cell->GetNumberOfCells(); i++) {
         Short_t cell_number = -1;
         Double_t cell_energy = NAN;
@@ -1337,6 +1338,9 @@ void AliAnalysisTaskNTGJ::fillEgNtrial()
     _branch_eg_ntrial = _skim_sum_eg_ntrial;
     _skim_sum_eg_ntrial = 0;
 }
+
+// line 2419; again, not sure where to put this
+#undef SAFE_MC_TRUTH_INDEX_TO_USHRT
 
 AliEMCALRecoUtils *AliAnalysisTaskNTGJ::GetEMCALRecoUtils(void)
 {

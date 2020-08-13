@@ -534,7 +534,8 @@ private:
     void fillPhotonNNBranches();
     void fillJetBranches();
     void skimJets();
-    void fillCellBranches();
+    void fillCellBranches(AliVCaloCells *emcal_cell,
+                          std::vector<size_t> stored_mc_truth_index);
     void fillMuonBranches();
     void fillEgNtrial();
 
