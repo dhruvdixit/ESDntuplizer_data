@@ -1201,7 +1201,26 @@ void AliAnalysisTaskNTGJ::getUEEstimate()
 
 void AliAnalysisTaskNTGJ::doClusterLoop()
 {
-    fillClusterBranches();
+
+  // FIXME: Turn this into a switch 
+
+  static const bool fill_cluster = true;
+  
+  const Int_t ncalo_cluster =
+    fill_cluster && _nrandom_isolation > 0 ?
+    _nrandom_isolation : calo_cluster->GetNEntries();
+  AliESDCaloCluster dummy_cluster;
+
+  for (Int_t i = 0; i < ncalo_cluster; i++) {
+
+  //Ommiting #if 0 claus   
+    AliVCluster *c = _nrandom_isolation > 0 ? &dummy_cluster :
+      static_cast<AliVCluster *>(calo_cluster->GetCluster(i));
+    
+    TLorentzVector p;
+    c->GetMomentum(p, _branch_primary_vertex);
+
+  fillClusterBranches(c,p);
     fillIsolationBranches();
     fillPhotonNNBranches();
 }
