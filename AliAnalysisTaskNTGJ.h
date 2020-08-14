@@ -1,3 +1,4 @@
+
 // -*- mode: c++; -*-
 
 #ifndef ALIANALYSISTASKPHOTONDISC_H_
@@ -528,9 +529,11 @@ private:
     void doClusterLoopForJets();
     void doManyFastjetThings();
     void getUEEstimate();
-    void doClusterLoop();
-    void fillClusterBranches();
-    void fillIsolationBranches();
+    void doClusterLoop(AliVCaloCells *emcal_cell,
+		       AliClusterContainer *cluster_container,
+		       AliTrackContainer *track_container);
+    void fillClusterBranches(AliVCaloCells *emcal_cell,AliVCluster* c);
+    void fillIsolationBranches(AliTrackContainer *track);
     void fillPhotonNNBranches();
     void fillJetBranches();
     void skimJets();

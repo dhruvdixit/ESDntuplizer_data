@@ -415,7 +415,8 @@ Bool_t AliAnalysisTaskNTGJ::Run()
     doClusterLoopForJets();
     doManyFastjetThings();
     getUEEstimate();
-    doClusterLoop(); // Fernando, except isolation stuff [lol]
+    doClusterLoop(emcal_cell,cluster_container,track_containers.front()); // Fernando
+    //doCLusteLoop called such that track_container = GetTrackContainer(0). FIXME: Verify?
     fillJetBranches();
     skimJets();
     fillCellBranches(emcal_cell, stored_mc_truth_index); // Fernando
@@ -1199,11 +1200,13 @@ void AliAnalysisTaskNTGJ::getUEEstimate()
 
 }
 
-void AliAnalysisTaskNTGJ::doClusterLoop()
+void AliAnalysisTaskNTGJ::doClusterLoop(AliVCaloCells *emcal_cell,
+					AliClusterContainer *cluster_container,
+					AliTrackContainer *track_container)
 {
 
+  AliClusterContainer *calo_cluster = GetClusterContainer(0);
   // FIXME: Turn this into a switch 
-
   static const bool fill_cluster = true;
   
   const Int_t ncalo_cluster =
@@ -1212,32 +1215,205 @@ void AliAnalysisTaskNTGJ::doClusterLoop()
   AliESDCaloCluster dummy_cluster;
 
   for (Int_t i = 0; i < ncalo_cluster; i++) {
+    //FIXME: where does ncalo_cluster come from
+  //Ommiting #if 0 claus
 
-  //Ommiting #if 0 claus   
+    //----------------
+    //Cluster Branches
+    //----------------
+    std::fill(_branch_cell_cluster_index,
+              _branch_cell_cluster_index +
+              sizeof(_branch_cell_cluster_index) /
+              sizeof(*_branch_cell_cluster_index), USHRT_MAX);
+    _branch_ncluster = 0;
+    //set arrays with USHRT_Max. Fill with data in loop
+    
     AliVCluster *c = _nrandom_isolation > 0 ? &dummy_cluster :
       static_cast<AliVCluster *>(calo_cluster->GetCluster(i));
     
-    TLorentzVector p;
-    c->GetMomentum(p, _branch_primary_vertex);
+    fillClusterBranches(emcal_cell,c);
 
-  fillClusterBranches(c,p);
-    fillIsolationBranches();
+    //------------------
+    //Isolation Branches
+    //------------------
+    //AliTrackContainer *track = GetTrackContainer(0);
+    fillIsolationBranches(track);
+    
+    //-------------------
+    //Neural Net Branches
+    //-------------------
     fillPhotonNNBranches();
+  }
 }
-
-void AliAnalysisTaskNTGJ::fillClusterBranches()
+void AliAnalysisTaskNTGJ::fillClusterBranches(AliVCaloCells *emcal_cell,AliVCluster* c)
 {
 
+  TLorentzVector p;
+  c->GetMomentum(p, _branch_primary_vertex);
+
+  _branch_cluster_e[_branch_ncluster] = half(p.E());
+  _branch_cluster_pt[_branch_ncluster] = half(p.Pt());
+  _branch_cluster_eta[_branch_ncluster] = half(p.Eta());
+  _branch_cluster_phi[_branch_ncluster] =
+    half(angular_range_reduce(p.Phi()));
+  
+  _branch_cluster_lambda_square[_branch_ncluster][0] =
+    half(c->GetM02());
+  _branch_cluster_lambda_square[_branch_ncluster][1] =
+    half(c->GetM20());
+
+        std::fill(_branch_cluster_lambda_square_angle
+                  [_branch_ncluster],
+                  _branch_cluster_lambda_square_angle
+                  [_branch_ncluster] + 2, NAN);
+        if (_emcal_geometry != NULL) {
+            Float_t l0      = 0;
+            Float_t l1      = 0;
+            Float_t dispp   = 0;
+            Float_t dEta    = 0;
+            Float_t dPhi    = 0;
+            Float_t sEta    = 0;
+            Float_t sPhi    = 0;
+            Float_t sEtaPhi = 0;
+
+            _reco_util->SetShowerShapeCellLocationType(1);
+            _reco_util->RecalculateClusterShowerShapeParameters(
+                _emcal_geometry, emcal_cell, c, l0, l1, dispp,
+                dEta, dPhi, sEta, sPhi, sEtaPhi);
+            _branch_cluster_lambda_square_angle[_branch_ncluster][0]
+                = half(l0);
+            _branch_cluster_lambda_square_angle[_branch_ncluster][1]
+                = half(l1);
+        }
+
+	_branch_cluster_tof[_branch_ncluster] =
+	  half(c->GetTOF() * 1e+9);
+        _branch_cluster_ncell[_branch_ncluster] = c->GetNCells();
+        _branch_cluster_nlocal_maxima[_branch_ncluster] =
+	  c->GetNExMax();
+        _branch_cluster_distance_to_bad_channel[_branch_ncluster] =
+	  half(c->GetDistanceToBadChannel());
+
+	const UShort_t *cell_index = c->GetCellsAbsId();
+
+        if (cell_index != NULL) {
+            for (Int_t j = 0; j < c->GetNCells(); j++) {
+                if (_branch_cell_cluster_index[cell_index[j]] ==
+                    USHRT_MAX) {
+                    _branch_cell_cluster_index[cell_index[j]] = i;
+                }
+                else {
+                    // USHRT_MAX - 1 if there is multiple association                                                         
+                    _branch_cell_cluster_index[cell_index[j]] =
+                        USHRT_MAX - 1;
+                }
+            }
+        }
+
+	Int_t cell_id_max = -1;
+        Double_t cell_energy_max = -INFINITY;
+        Double_t energy_cross = NAN;
+
+        cell_max_cross(cell_id_max, cell_energy_max,
+		       energy_cross,c, emcal_cell);
+	
+        _branch_cluster_cell_id_max[_branch_ncluster] =
+	  cell_id_max;
+
+	_branch_cluster_e_max[_branch_ncluster] =
+	  half(cell_energy_max);
+
+        _branch_cluster_e_cross[_branch_ncluster] =
+	  half(energy_cross);
+	
+        _branch_cluster_nmc_truth[_branch_ncluster] =
+            c->GetNLabels();
+
+      std::vector<std::pair<float, unsigned short> >
+            mc_truth_energy_index;
+        std::set<Int_t> cluster_mc_truth_index;
+
+        for (UInt_t j = 0; j < c->GetNLabels(); j++) {
+            const Int_t mc_truth_index = c->GetLabelAt(j);
+
+            if (mc_truth_index >= 0 &&
+                static_cast<size_t>(mc_truth_index) <
+                stored_mc_truth_index.size() &&
+                stored_mc_truth_index[mc_truth_index] !=
+                ULONG_MAX &&
+                cluster_mc_truth_index.find(
+                    stored_mc_truth_index[mc_truth_index]) ==
+                cluster_mc_truth_index.end()) {
+                const unsigned short u =
+                    SAFE_MC_TRUTH_INDEX_TO_USHRT(mc_truth_index);
+
+                mc_truth_energy_index.push_back(
+                    std::pair<float, unsigned short>(
+                        _branch_mc_truth_e[stored_mc_truth_index[
+                            mc_truth_index]],
+                        u));
+            }
+            // Test (above) and insertion must be done via
+            // stored_mc_truth_index[], since mc_truth_index are
+            // potentially secondaries
+            cluster_mc_truth_index.insert(
+                stored_mc_truth_index[mc_truth_index]);
+        }
+
+	std::sort(mc_truth_energy_index.begin(),
+                  mc_truth_energy_index.end());
+        std::fill(_branch_cluster_mc_truth_index[_branch_ncluster],
+                  _branch_cluster_mc_truth_index[_branch_ncluster] +
+                  CLUSTER_NMC_TRUTH_MAX, USHRT_MAX);
+	
+        size_t cluster_nmctruth_index = 0;
+	
+        for (std::vector<std::pair<float, unsigned short> >::
+                 const_reverse_iterator iterator =
+                 mc_truth_energy_index.rbegin();
+             iterator != mc_truth_energy_index.rend(); iterator++) {
+            if (cluster_nmctruth_index >= CLUSTER_NMC_TRUTH_MAX) {
+                break;
+            }
+            _branch_cluster_mc_truth_index[_branch_ncluster]
+                [cluster_nmctruth_index] = iterator->second;
+            cluster_nmctruth_index++;
+        }
+
+	
 }
 
 void AliAnalysisTaskNTGJ::fillIsolationBranches()
 {
-
+  //Line 1853
 }
 
 void AliAnalysisTaskNTGJ::fillPhotonNNBranches()
 {
+  //Line 2323
+       std::fill(_branch_cluster_s_nphoton[_branch_ncluster],
+                  _branch_cluster_s_nphoton[_branch_ncluster] + 4,
+                  NAN);
+	std::fill(_branch_cluster_s_ncharged_hadron[_branch_ncluster],
+                  _branch_cluster_s_ncharged_hadron
+                  [_branch_ncluster] + 4, NAN);
 
+        std::vector<float> output_tensor =
+            cluster_cell_keras_inference(
+                c, emcal_cell, _branch_primary_vertex, v0,
+                *reinterpret_cast<KerasModel *>(
+                    _keras_model_photon_discrimination));
+
+        if (output_tensor.size() == 2) {
+            std::copy(output_tensor.begin(), output_tensor.end(),
+                      _branch_cluster_s_nphoton[_branch_ncluster] + 1);
+	}
+
+        _branch_ncluster++;
+        if (_branch_ncluster >= NCLUSTER_MAX) {
+            break;
+        }
+    }
 }
 
 void AliAnalysisTaskNTGJ::fillJetBranches()
@@ -1306,7 +1482,7 @@ void AliAnalysisTaskNTGJ::fillCellBranches(AliVCaloCells * emcal_cell,
         }
     }
 
-// why is this here of all places?
+// why is this here of all places? //No idea....
 #ifdef WITH_EFP7
 #include "fill_efp7.h"
 #endif // WITH_EFP7
