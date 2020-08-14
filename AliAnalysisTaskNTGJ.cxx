@@ -415,7 +415,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
     doClusterLoopForJets();
     doManyFastjetThings();
     getUEEstimate();
-    doClusterLoop(emcal_cell,cluster_container,track_containers.front()); // Fernando
+    doClusterLoop(event,emcal_cell,cluster_container,track_containers->front(),stored_mc_truth_index); // Fernando
     //doCLusteLoop called such that track_container = GetTrackContainer(0). FIXME: Verify?
     fillJetBranches();
     skimJets();
@@ -1200,18 +1200,23 @@ void AliAnalysisTaskNTGJ::getUEEstimate()
 
 }
 
-void AliAnalysisTaskNTGJ::doClusterLoop(AliVCaloCells *emcal_cell,
+void AliAnalysisTaskNTGJ::doClusterLoop(AliVEvent * event,
+					AliVCaloCells *emcal_cell,
 					AliClusterContainer *cluster_container,
-					AliTrackContainer *track_container)
+					AliTrackContainer *track_container,
+					std::vector<size_t> stored_mc_truth_index)
 {
 
-  AliClusterContainer *calo_cluster = GetClusterContainer(0);
+
+  AliVVZERO *v0 = event->GetVZEROData();
+
+  //AliClusterContainer *calo_cluster = GetClusterContainer(0);
   // FIXME: Turn this into a switch 
   static const bool fill_cluster = true;
   
   const Int_t ncalo_cluster =
     fill_cluster && _nrandom_isolation > 0 ?
-    _nrandom_isolation : calo_cluster->GetNEntries();
+    _nrandom_isolation : cluster_container->GetNEntries();
   AliESDCaloCluster dummy_cluster;
 
   for (Int_t i = 0; i < ncalo_cluster; i++) {
@@ -1229,25 +1234,25 @@ void AliAnalysisTaskNTGJ::doClusterLoop(AliVCaloCells *emcal_cell,
     //set arrays with USHRT_Max. Fill with data in loop
     
     AliVCluster *c = _nrandom_isolation > 0 ? &dummy_cluster :
-      static_cast<AliVCluster *>(calo_cluster->GetCluster(i));
+      static_cast<AliVCluster *>(cluster_container->GetCluster(i));
     
-    fillClusterBranches(emcal_cell,c);
+    fillClusterBranches(emcal_cell,c,i,stored_mc_truth_index);
 
     //------------------
     //Isolation Branches
     //------------------
     //AliTrackContainer *track = GetTrackContainer(0);
-    fillIsolationBranches(track);
+    fillIsolationBranches(track_container);
     
     //-------------------
     //Neural Net Branches
     //-------------------
-    fillPhotonNNBranches();
+    fillPhotonNNBranches(c,stored_mc_truth_index,emcal_cell,v0);
   }
 }
-void AliAnalysisTaskNTGJ::fillClusterBranches(AliVCaloCells *emcal_cell,AliVCluster* c)
+void AliAnalysisTaskNTGJ::fillClusterBranches(AliVCaloCells *emcal_cell,AliVCluster* c,Int_t i,std::vector<size_t> stored_mc_truth_index)
 {
-
+  //FIXME: change away from single letter variables...
   TLorentzVector p;
   c->GetMomentum(p, _branch_primary_vertex);
 
@@ -1383,14 +1388,15 @@ void AliAnalysisTaskNTGJ::fillClusterBranches(AliVCaloCells *emcal_cell,AliVClus
 	
 }
 
-void AliAnalysisTaskNTGJ::fillIsolationBranches()
+void AliAnalysisTaskNTGJ::fillIsolationBranches(AliTrackContainer *track_container)
 {
   //Line 1853
 }
 
-void AliAnalysisTaskNTGJ::fillPhotonNNBranches()
+void AliAnalysisTaskNTGJ::fillPhotonNNBranches(AliVCluster* c,std::vector<size_t> stored_mc_truth_index,AliVCaloCells *emcal_cell,AliVVZERO *v0)
 {
   //Line 2323
+
        std::fill(_branch_cluster_s_nphoton[_branch_ncluster],
                   _branch_cluster_s_nphoton[_branch_ncluster] + 4,
                   NAN);
@@ -1411,10 +1417,10 @@ void AliAnalysisTaskNTGJ::fillPhotonNNBranches()
 
         _branch_ncluster++;
         if (_branch_ncluster >= NCLUSTER_MAX) {
-            break;
+            return;
         }
-    }
 }
+
 
 void AliAnalysisTaskNTGJ::fillJetBranches()
 {
