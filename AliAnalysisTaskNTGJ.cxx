@@ -1206,11 +1206,10 @@ void AliAnalysisTaskNTGJ::doClusterLoop(AliVEvent * event,
 					AliTrackContainer *track_container,
 					std::vector<size_t> stored_mc_truth_index)
 {
-
+  //FIXME: pass vector of containers
 
   AliVVZERO *v0 = event->GetVZEROData();
 
-  //AliClusterContainer *calo_cluster = GetClusterContainer(0);
   // FIXME: Turn this into a switch 
   static const bool fill_cluster = true;
   
@@ -1219,9 +1218,14 @@ void AliAnalysisTaskNTGJ::doClusterLoop(AliVEvent * event,
     _nrandom_isolation : cluster_container->GetNEntries();
   AliESDCaloCluster dummy_cluster;
 
-  for (Int_t i = 0; i < ncalo_cluster; i++) {
-    //FIXME: where does ncalo_cluster come from
   //Ommiting #if 0 claus
+  
+  AliDebugStream(3) << "loop 3 through clusters; inner loops through cells, tracks, clusters, MC container" << std::endl;
+  Int_t i = 0;
+  for (auto cluster : cluster_container->accepted()) {
+    if (i >= ncalo_cluster) {
+      break;
+    }
 
     //----------------
     //Cluster Branches
@@ -1233,8 +1237,7 @@ void AliAnalysisTaskNTGJ::doClusterLoop(AliVEvent * event,
     _branch_ncluster = 0;
     //set arrays with USHRT_Max. Fill with data in loop
     
-    AliVCluster *c = _nrandom_isolation > 0 ? &dummy_cluster :
-      static_cast<AliVCluster *>(cluster_container->GetCluster(i));
+    AliVCluster *c = _nrandom_isolation > 0 ? &dummy_cluster : cluster;
     
     fillClusterBranches(emcal_cell,c,i,stored_mc_truth_index);
 
