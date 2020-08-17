@@ -1,3 +1,4 @@
+
 // -*- mode: c++; -*-
 
 #ifndef ALIANALYSISTASKPHOTONDISC_H_
@@ -509,10 +510,9 @@ private:
     void getPileup(AliESDEvent *esd_event,
                    AliAODEvent *aod_event);
     bool skimMultiplicityTracklet(AliVEvent *event);
-    bool skimClusterE();
+    bool skimClusterE(AliClusterContainer *calo_cluster);
     void getMetadata(AliESDEvent *esd_event,
                      AliAODEvent *aod_event);
-    void getEmcalCellInfo();
     void getPrimaryMCParticles(AliMCParticleContainer *mc_container,
                                std::vector<size_t> *stored_mc_truth_index,
                                std::vector<Int_t> *reverse_stored_mc_truth_index,
@@ -529,13 +529,27 @@ private:
     void doClusterLoopForJets();
     void doManyFastjetThings();
     void getUEEstimate();
-    void doClusterLoop();
-    void fillClusterBranches();
-    void fillIsolationBranches();
-    void fillPhotonNNBranches();
+    void doClusterLoop(AliVEvent *event,
+                       AliVCaloCells *emcal_cell,
+                       AliClusterContainer *cluster_container,
+                       std::vector<AliTrackContainer*> *track_containers,
+                       AliMCParticleContainer *mc_container,
+                       std::vector<size_t> stored_mc_truth_index);
+    void fillClusterBranches(AliVCaloCells *emcal_cell,
+                             AliVCluster *c,
+                             Int_t i, // i is cluster index in loop
+                             std::vector<size_t> stored_mc_truth_index);
+    void fillIsolationBranches(AliClusterContainer *cluster_container,
+                               std::vector<AliTrackContainer*> *track_containers,
+                               AliMCParticleContainer *mc_container);
+    void fillPhotonNNBranches(AliVCluster *c,
+                              std::vector<size_t> stored_mc_truth_index,
+                              AliVCaloCells *emcal_cell,
+                              AliVVZERO *v0);
     void fillJetBranches();
     void skimJets();
-    void fillCellBranches();
+    void fillCellBranches(AliVCaloCells *emcal_cell,
+                          std::vector<size_t> stored_mc_truth_index);
     void fillMuonBranches();
     void fillEgNtrial();
 
