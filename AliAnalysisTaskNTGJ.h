@@ -529,18 +529,23 @@ private:
     void doClusterLoopForJets();
     void doManyFastjetThings();
     void getUEEstimate();
-  void doClusterLoop(AliVEvent * event,
-		     AliVCaloCells *emcal_cell,
-		     AliClusterContainer *cluster_container,
-		     AliTrackContainer *track_container,
-		     std::vector<size_t> stored_mc_truth_index);
-  void fillClusterBranches(AliVCaloCells *emcal_cell,AliVCluster* c,
-			   Int_t i,std::vector<size_t> stored_mc_truth_index);
-  //i is cluster index in loop
-  void fillIsolationBranches(AliTrackContainer *track);
-  void fillPhotonNNBranches(AliVCluster* c,
-			    std::vector<size_t> stored_mc_truth_index,
-			    AliVCaloCells *emcal_cell,AliVVZERO *v0);
+    void doClusterLoop(AliVEvent *event,
+                       AliVCaloCells *emcal_cell,
+                       AliClusterContainer *cluster_container,
+                       std::vector<AliTrackContainer*> *track_containers,
+                       AliMCParticleContainer *mc_container,
+                       std::vector<size_t> stored_mc_truth_index);
+    void fillClusterBranches(AliVCaloCells *emcal_cell,
+                             AliVCluster *c,
+                             Int_t i, // i is cluster index in loop
+                             std::vector<size_t> stored_mc_truth_index);
+    void fillIsolationBranches(AliClusterContainer *cluster_container,
+                               std::vector<AliTrackContainer*> *track_containers,
+                               AliMCParticleContainer *mc_container);
+    void fillPhotonNNBranches(AliVCluster *c,
+                              std::vector<size_t> stored_mc_truth_index,
+                              AliVCaloCells *emcal_cell,
+                              AliVVZERO *v0);
     void fillJetBranches();
     void skimJets();
     void fillCellBranches(AliVCaloCells *emcal_cell,
