@@ -395,7 +395,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
     }
 
     initializeFastjetVectors();
-    doTrackLoop(); // Dhruv
+    doTrackLoop(aod_event, track_containers, mc_container, stored_mc_truth_index); // Dhruv
     doClusterLoopForAreaDetermination();
     computeVoronoiAreas();
     initializeMoreFastjetVectors();
@@ -1012,9 +1012,140 @@ void AliAnalysisTaskNTGJ::initializeFastjetVectors()
 
 }
 
-void AliAnalysisTaskNTGJ::doTrackLoop()
+void AliAnalysisTaskNTGJ::doTrackLoop(AliAODEvent *aod_event,
+				      std::vector<AliTrackContainer*> *track_containers,
+				      AliMCParticleContainer *mc_container,
+				      std::vector<size_t> stored_mc_truth_index)
 {
+  _branch_ntrack = 0;
+  if (aod_event != NULL) {
+    Int_t itrack = 0;
+    for (auto track_container : track_containers) {
+      for (auto track : track_container->accepted()) {
+	if (track == NULL)
+	  continue;
+	
+	AliAODTrack * t = static_cast<AliAODTrack*>(track);
+	
+	/*bits 1 and 2 are Standard hybrid track cuts for pp and pPb
+	  bits 3 and 4 are PbPb cuts
+	  bit 5 is ITS only cuts
+	*/
+	UInt_t _local_track_cut_bits = get_local_track_cut_bits(t, event);
+	if (_local_track_cut_bits == 0)
+	  continue;
+	
+	if ((_local_track_cut_bits & 15) != 0) {
+	  track_reco_index_tpc[itrack] = particle_reco_tpc.size();
+	  reco_stored_track_index_tpc.push_back(_branch_ntrack);
+	  particle_reco_tpc.push_back(fastjet::PseudoJet(t->Px(), t->Py(), t->Pz(), t->P()));
+	  kahan_sum(_branch_met_tpc[0], met_tpc_kahan_error[0], t->Px());
+	  kahan_sum(_branch_met_tpc[1], met_tpc_kahan_error[1], t->Py());
+	}
+	
+	if ((_local_track_cut_bits & 16) != 0) {
+	  track_reco_index_its[itrack] = particle_reco_its.size();
+	  reco_stored_track_index_its.push_back(_branch_ntrack);
+	  particle_reco_its.push_back(fastjet::PseudoJet(t->Px(), t->Py(), t->Pz(), t->P()));
+	  kahan_sum(_branch_met_its[0], met_its_kahan_error[0], t->Px());
+	  kahan_sum(_branch_met_its[1], met_its_kahan_error[1], t->Py());
+	}
+	
+	
+	_branch_track_e[_branch_ntrack] = half(t->E());
+	_branch_track_pt[_branch_ntrack] = half(t->Pt());
+	_branch_track_eta[_branch_ntrack] = half(t->Eta());
+	_branch_track_phi[_branch_ntrack] =
+	  half(angular_range_reduce(t->Phi()));
+	if (gGeoManager != NULL) {
+	  _branch_track_eta_emcal[_branch_ntrack] =
+	    half(t->GetTrackEtaOnEMCal());
+	  _branch_track_phi_emcal[_branch_ntrack] =
+	    half(angular_range_reduce(t->GetTrackPhiOnEMCal()));
+	}
+	else {
+	  _branch_track_eta_emcal[_branch_ntrack] = NAN;
+	  _branch_track_phi_emcal[_branch_ntrack] = NAN;
+	}
+	_branch_track_charge[_branch_ntrack] =
+	  std::min(static_cast<Short_t>(CHAR_MAX),
+		   std::max(static_cast<Short_t>(CHAR_MIN),t->Charge()));
+	
+	_branch_track_quality[_branch_ntrack] = _local_track_cut_bits;
+	
+	_branch_track_tpc_dedx[_branch_ntrack] = half(t->GetTPCsignal());
+	
+	static const Int_t mode_inner_wall = 1;
+	static const Double_t dead_zone_width_cm = 2;
+	static const Double_t max_z_cm = 220;
+	
+	_branch_track_tpc_length_active_zone[_branch_ntrack] = NAN;
 
+	/*if (t->GetInnerParam() != NULL) {
+	  _branch_track_tpc_length_active_zone
+	  [_branch_ntrack] =
+	  half(t->GetLengthInActiveZone
+	  (mode_inner_wall, dead_zone_width_cm,
+	  max_z_cm, event->GetMagneticField()));
+	  }//*/
+	
+	_branch_track_tpc_xrow[_branch_ntrack] =
+	  std::min(static_cast<Float_t>(UCHAR_MAX),
+		   std::max(0.0F, t->GetTPCCrossedRows()));
+	_branch_track_tpc_ncluster[_branch_ntrack] = std::min(static_cast<UShort_t>(UCHAR_MAX), std::max(static_cast<UShort_t>(0), t->GetTPCNcls()));
+	// _branch_track_tpc_ncluster[_branch_ntrack] =
+	//     std::min(UCHAR_MAX,
+	//              std::max(0, t->GetTPCNcls()));
+	_branch_track_tpc_ncluster_dedx[_branch_ntrack] =
+	  std::min(static_cast<UShort_t>(UCHAR_MAX),
+		   std::max(static_cast<UShort_t>(0),
+			    t->GetTPCsignalN()));
+	_branch_track_tpc_ncluster_findable[_branch_ntrack] =
+	  std::min(static_cast<UShort_t>(UCHAR_MAX),
+		   std::max(static_cast<UShort_t>(0),
+			    t->GetTPCNclsF()));
+	_branch_track_its_ncluster[_branch_ntrack] =
+	  t->GetITSNcls();
+	_branch_track_its_chi_square[_branch_ntrack] =
+	  half(t->GetITSchi2());
+	
+	Double_t dz[2] = { NAN, NAN };
+	Double_t cov[3] = { NAN, NAN, NAN };
+	
+	if (t->PropagateToDCA
+	    (primary_vertex, event->GetMagneticField(),
+	     kVeryBig, dz, cov) == kTRUE) {
+	  _branch_track_dca_xy[_branch_ntrack] =
+	    half(dz[0]);
+	  _branch_track_dca_z[_branch_ntrack] =
+	    half(dz[1]);
+	}
+	
+	const Int_t mc_truth_index = t->GetLabel();
+	
+#define SAFE_MC_TRUTH_INDEX_TO_USHRT(mc_truth_index)            \
+	!(mc_truth_index >= 0 &&				\
+	  static_cast<size_t>(mc_truth_index) <			\
+	  stored_mc_truth_index.size()) ? USHRT_MAX :		\
+	  stored_mc_truth_index[mc_truth_index] ==		\
+	  ULONG_MAX ?						\
+	  USHRT_MAX :						\
+	  std::min(static_cast<size_t>(USHRT_MAX),		\
+		   std::max(static_cast<size_t>(0),		\
+			    stored_mc_truth_index		\
+			    [mc_truth_index]));
+	
+	_branch_track_mc_truth_index[_branch_ntrack] =
+                    SAFE_MC_TRUTH_INDEX_TO_USHRT(mc_truth_index);
+	_branch_track_voronoi_area[_branch_ntrack] = 0;
+	
+	_branch_ntrack++;
+	if (_branch_ntrack >= NTRACK_MAX) {
+	  break;
+	}
+      }
+    }
+  }
 }
 
 void AliAnalysisTaskNTGJ::doClusterLoopForAreaDetermination()
