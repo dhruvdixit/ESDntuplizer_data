@@ -501,9 +501,11 @@ private:
     void loadMC(AliAODEvent *aod_event);
     void getBeamProperties(AliVEvent *event,
                            AliESDEvent *esd_event,
-                           AliAODEvent *aod_event);
+                           AliAODEvent *aod_event,
+                           const AliVVertex *&primary_vertex);
     void getPrimaryVertex(AliVEvent *event,
-                          AliESDEvent *esd_event);
+                          AliESDEvent *esd_event,
+                          const AliVVertex *&primary_vertex);
     void getPrimaryVertexSPD(AliVEvent *event,
                              AliESDEvent *esd_event,
                              AliAODEvent *aod_event);
@@ -518,7 +520,12 @@ private:
                                std::vector<Int_t> *reverse_stored_mc_truth_index,
                                std::vector<Int_t> *reverse_stored_parton_algorithmic_index);
     void initializeFastjetVectors();
-    void doTrackLoop();
+    void doTrackLoop(AliVEvent *event,
+                     AliAODEvent *aod_event,
+                     std::vector<AliTrackContainer*> *track_containers,
+                     AliMCParticleContainer *mc_container,
+                     std::vector<size_t> stored_mc_truth_index,
+                     const AliVVertex *primary_vertex);
     void doClusterLoopForAreaDetermination();
     void computeVoronoiAreas();
     void initializeMoreFastjetVectors();
