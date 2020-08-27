@@ -451,147 +451,151 @@ private:
 #undef l
 #undef O
 
-  Int_t _run_number_current; //!
-  
-  TFormula *_f1_ncluster_tpc_linear_pt_dep; //!
-  std::vector<AliESDtrackCuts> _track_cut; //!
-  
-  AliEMCALRecoUtils *_reco_util; //!
-  AliEMCALGeometry *_emcal_geometry; //!
-  
-  AliMuonTrackCuts *_muon_track_cut; //!
-  
-  size_t _ncell; //!
-  
-  std::string _emcal_geometry_filename;
-  std::string _emcal_local2master_filename;
-  
-  bool _force_ue_subtraction;
-  double _skim_cluster_min_e;
-  double _skim_track_min_pt;
-  double _skim_muon_track_min_pt;
-  std::vector<double> _skim_jet_min_pt;
-  double _skim_jet_average_pt;
-  int _skim_multiplicity_tracklet_min_n;
-  int _skim_sum_eg_ntrial;
-  double _stored_track_min_pt;
-  double _stored_jet_min_pt_raw;
-  unsigned int _nrandom_isolation;
-  bool _is_embed;
-  
-  std::vector<bool> _emcal_mask; //!
-  
-  void *_emcal_cell_position; //!
-  
-  void *_keras_model_photon_discrimination; //!
-  
-  AliAnalysisAlien *_alien_plugin; //!
-  bool _metadata_filled; //!
-  
-  void loadEmcalGeometry();
-  bool getEvent(AliVEvent *&event,
-		AliESDEvent *&esd_event,
-		AliAODEvent *&aod_event);
-  void getContainers(AliClusterContainer *&cluster_container,
-		     std::vector<AliTrackContainer*> *&track_containers,
-		     AliMCParticleContainer *&mc_container);
-  void setTrackCuts();
-  void getMultiplicityCentralityEventPlane(AliVEvent *event);
-  void loadPhotonNNModel();
-  void loadMC(AliAODEvent *aod_event);
-  void getBeamProperties(AliVEvent *event,
-			 AliESDEvent *esd_event,
-			 AliAODEvent *aod_event);
-  void getPrimaryVertex(AliVEvent *event,
-			AliESDEvent *esd_event);
-  void getPrimaryVertexSPD(AliVEvent *event,
-			   AliESDEvent *esd_event,
-			   AliAODEvent *aod_event);
-  void getPileup(AliESDEvent *esd_event,
-		 AliAODEvent *aod_event);
-  bool skimMultiplicityTracklet(AliVEvent *event);
-  bool skimClusterE(AliClusterContainer *calo_cluster);
-  void getMetadata(AliESDEvent *esd_event,
-		   AliAODEvent *aod_event);
-  void getPrimaryMCParticles(AliMCParticleContainer *mc_container,
-			     std::vector<size_t> *stored_mc_truth_index,
-			     std::vector<Int_t> *reverse_stored_mc_truth_index,
-			     std::vector<Int_t> *reverse_stored_parton_algorithmic_index);
-  void initializeFastjetVectors();
-  void doTrackLoop(AliAODEvent *aod_event,
-		   std::vector<AliTrackContainer*> *track_containers,
-		   AliMCParticleContainer *mc_container,
-		   std::vector<size_t> stored_mc_truth_index);  
-  void doClusterLoopForAreaDetermination();
-  void computeVoronoiAreas();
-  void initializeMoreFastjetVectors();
-  void doMCParticleLoop(AliMCParticleContainer *mc_container,
-			AliESDEvent *esd_event,
-			std::vector<Int_t> reverse_stored_mc_truth_index);
-  void fastjetTruthJets();
-  void doClusterLoopForJets();
-  void doManyFastjetThings();
-  void getUEEstimate();
-  void doClusterLoop(AliVEvent *event,
-		     AliVCaloCells *emcal_cell,
-		     AliClusterContainer *cluster_container,
-		     std::vector<AliTrackContainer*> *track_containers,
-		     AliMCParticleContainer *mc_container,
-		     std::vector<size_t> stored_mc_truth_index);
-  void fillClusterBranches(AliVCaloCells *emcal_cell,
-			   AliVCluster *c,
-			   Int_t i, // i is cluster index in loop
-			   std::vector<size_t> stored_mc_truth_index);
-  void fillIsolationBranches(AliClusterContainer *cluster_container,
-			     std::vector<AliTrackContainer*> *track_containers,
-			     AliMCParticleContainer *mc_container);
-  void fillPhotonNNBranches(AliVCluster *c,
-			    std::vector<size_t> stored_mc_truth_index,
-			    AliVCaloCells *emcal_cell,
-			    AliVVZERO *v0);
-  void fillJetBranches();
-  void skimJets();
-  void fillCellBranches(AliVCaloCells *emcal_cell,
-			std::vector<size_t> stored_mc_truth_index);
-  void fillMuonBranches();
-  void fillEgNtrial();
-  
+    Int_t _run_number_current; //!
+
+    TFormula *_f1_ncluster_tpc_linear_pt_dep; //!
+    std::vector<AliESDtrackCuts> _track_cut; //!
+
+    AliEMCALRecoUtils *_reco_util; //!
+    AliEMCALGeometry *_emcal_geometry; //!
+
+    AliMuonTrackCuts *_muon_track_cut; //!
+
+    size_t _ncell; //!
+
+    std::string _emcal_geometry_filename;
+    std::string _emcal_local2master_filename;
+
+    bool _force_ue_subtraction;
+    double _skim_cluster_min_e;
+    double _skim_track_min_pt;
+    double _skim_muon_track_min_pt;
+    std::vector<double> _skim_jet_min_pt;
+    double _skim_jet_average_pt;
+    int _skim_multiplicity_tracklet_min_n;
+    int _skim_sum_eg_ntrial;
+    double _stored_track_min_pt;
+    double _stored_jet_min_pt_raw;
+    unsigned int _nrandom_isolation;
+    bool _is_embed;
+
+    std::vector<bool> _emcal_mask; //!
+
+    void *_emcal_cell_position; //!
+
+    void *_keras_model_photon_discrimination; //!
+
+    AliAnalysisAlien *_alien_plugin; //!
+    bool _metadata_filled; //!
+
+    void loadEmcalGeometry();
+    bool getEvent(AliVEvent *&event,
+                  AliESDEvent *&esd_event,
+                  AliAODEvent *&aod_event);
+    void getContainers(AliClusterContainer *&cluster_container,
+                       std::vector<AliTrackContainer*> *&track_containers,
+                       AliMCParticleContainer *&mc_container);
+    void setTrackCuts();
+    void getMultiplicityCentralityEventPlane(AliVEvent *event);
+    void loadPhotonNNModel();
+    void loadMC(AliAODEvent *aod_event);
+    void getBeamProperties(AliVEvent *event,
+                           AliESDEvent *esd_event,
+                           AliAODEvent *aod_event,
+                           const AliVVertex *&primary_vertex);
+    void getPrimaryVertex(AliVEvent *event,
+                          AliESDEvent *esd_event,
+                          const AliVVertex *&primary_vertex);
+    void getPrimaryVertexSPD(AliVEvent *event,
+                             AliESDEvent *esd_event,
+                             AliAODEvent *aod_event);
+    void getPileup(AliESDEvent *esd_event,
+                   AliAODEvent *aod_event);
+    bool skimMultiplicityTracklet(AliVEvent *event);
+    bool skimClusterE(AliClusterContainer *calo_cluster);
+    void getMetadata(AliESDEvent *esd_event,
+                     AliAODEvent *aod_event);
+    void getPrimaryMCParticles(AliMCParticleContainer *mc_container,
+                               std::vector<size_t> *stored_mc_truth_index,
+                               std::vector<Int_t> *reverse_stored_mc_truth_index,
+                               std::vector<Int_t> *reverse_stored_parton_algorithmic_index);
+    void initializeFastjetVectors();
+    void doTrackLoop(AliVEvent *event,
+                     AliAODEvent *aod_event,
+                     std::vector<AliTrackContainer*> *track_containers,
+                     AliMCParticleContainer *mc_container,
+                     std::vector<size_t> stored_mc_truth_index,
+                     const AliVVertex *primary_vertex);
+    void doClusterLoopForAreaDetermination();
+    void computeVoronoiAreas();
+    void initializeMoreFastjetVectors();
+    void doMCParticleLoop(AliMCParticleContainer *mc_container,
+                          AliESDEvent *esd_event,
+                          std::vector<Int_t> reverse_stored_mc_truth_index);
+    void fastjetTruthJets();
+    void doClusterLoopForJets();
+    void doManyFastjetThings();
+    void getUEEstimate();
+    void doClusterLoop(AliVEvent *event,
+                       AliVCaloCells *emcal_cell,
+                       AliClusterContainer *cluster_container,
+                       std::vector<AliTrackContainer*> *track_containers,
+                       AliMCParticleContainer *mc_container,
+                       std::vector<size_t> stored_mc_truth_index);
+    void fillClusterBranches(AliVCaloCells *emcal_cell,
+                             AliVCluster *c,
+                             Int_t i, // i is cluster index in loop
+                             std::vector<size_t> stored_mc_truth_index);
+    void fillIsolationBranches(AliClusterContainer *cluster_container,
+                               std::vector<AliTrackContainer*> *track_containers,
+                               AliMCParticleContainer *mc_container);
+    void fillPhotonNNBranches(AliVCluster *c,
+                              std::vector<size_t> stored_mc_truth_index,
+                              AliVCaloCells *emcal_cell,
+                              AliVVZERO *v0);
+    void fillJetBranches();
+    void skimJets();
+    void fillCellBranches(AliVCaloCells *emcal_cell,
+                          std::vector<size_t> stored_mc_truth_index);
+    void fillMuonBranches();
+    void fillEgNtrial();
+
 public:
-  AliAnalysisTaskNTGJ(const char *name = "NTGJ");
-  AliAnalysisTaskNTGJ(const AliAnalysisTaskNTGJ &);
-  AliAnalysisTaskNTGJ &operator=(const AliAnalysisTaskNTGJ &);
-  ~AliAnalysisTaskNTGJ(void);
-  virtual void UserCreateOutputObjects(void);
-  AliEMCALRecoUtils *GetEMCALRecoUtils(void);
-  void SetAliROOTVersion(const char *version);
-  void SetAliPhysicsVersion(const char *version);
-  void SetGridDataDir(const char *dir);
-  void SetGridDataPattern(const char *pattern);
-  //
-  void SetEMCALGeometryFilename(const char *
-				emcal_geometry_filename);
-  void SetEMCALLocal2MasterFilename(const char *
-				    emcal_local2master_filename);
-  //
-  void SetForceUESubtraction(bool force_ue_subtraction = true);
-  void SetSkimClusterMinE(double min_e = -INFINITY);
-  void SetSkimTrackMinPt(double min_pt = -INFINITY);
-  void SetSkimMuonTrackMinPt(double min_pt = -INFINITY);
-  void SetSkimJetMinPt(double min_pt_1 = -INFINITY,
-		       double min_pt_2 = -INFINITY,
-		       double min_pt_3 = -INFINITY);
-  void SetSkimJetAveragePt(double average_pt = -INFINITY);
-  void SetSkimMultiplicityTrackletMinN(int min_n = INT_MIN);
-  //
-  void SetStoredTrackMinPt(double min_pt = -INFINITY);
-  void SetStoredJetMinPtRaw(double min_pt_raw = -INFINITY);
-  void SetNRandomIsolation(unsigned int nrandom_isolation = 0);
-  void SetIsEmbed(bool is_embed = false);
-  ClassDef(AliAnalysisTaskNTGJ, 1);
-  
+    AliAnalysisTaskNTGJ(const char *name = "NTGJ");
+    AliAnalysisTaskNTGJ(const AliAnalysisTaskNTGJ &);
+    AliAnalysisTaskNTGJ &operator=(const AliAnalysisTaskNTGJ &);
+    ~AliAnalysisTaskNTGJ(void);
+    virtual void UserCreateOutputObjects(void);
+    AliEMCALRecoUtils *GetEMCALRecoUtils(void);
+    void SetAliROOTVersion(const char *version);
+    void SetAliPhysicsVersion(const char *version);
+    void SetGridDataDir(const char *dir);
+    void SetGridDataPattern(const char *pattern);
+    //
+    void SetEMCALGeometryFilename(const char *
+                                  emcal_geometry_filename);
+    void SetEMCALLocal2MasterFilename(const char *
+                                      emcal_local2master_filename);
+    //
+    void SetForceUESubtraction(bool force_ue_subtraction = true);
+    void SetSkimClusterMinE(double min_e = -INFINITY);
+    void SetSkimTrackMinPt(double min_pt = -INFINITY);
+    void SetSkimMuonTrackMinPt(double min_pt = -INFINITY);
+    void SetSkimJetMinPt(double min_pt_1 = -INFINITY,
+                         double min_pt_2 = -INFINITY,
+                         double min_pt_3 = -INFINITY);
+    void SetSkimJetAveragePt(double average_pt = -INFINITY);
+    void SetSkimMultiplicityTrackletMinN(int min_n = INT_MIN);
+    //
+    void SetStoredTrackMinPt(double min_pt = -INFINITY);
+    void SetStoredJetMinPtRaw(double min_pt_raw = -INFINITY);
+    void SetNRandomIsolation(unsigned int nrandom_isolation = 0);
+    void SetIsEmbed(bool is_embed = false);
+    ClassDef(AliAnalysisTaskNTGJ, 1);
+
 protected:
-  Bool_t Run();
-  
+    Bool_t Run();
+
 };
 
 #endif // ALIANALYSISTASKPHOTONDISC_H_
