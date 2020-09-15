@@ -520,9 +520,9 @@ private:
     void getMetadata(AliESDEvent *esd_event,
                      AliAODEvent *aod_event);
     void getPrimaryMCParticles(AliMCParticleContainer *mc_container,
-                               std::vector<size_t> *stored_mc_truth_index,
-                               std::vector<Int_t> *reverse_stored_mc_truth_index,
-                               std::vector<Int_t> *reverse_stored_parton_algorithmic_index);
+                               std::vector<size_t> &stored_mc_truth_index,
+                               std::vector<Int_t> &reverse_stored_mc_truth_index,
+                               std::vector<Int_t> &reverse_stored_parton_algorithmic_index);
     void doTrackLoop(AliVEvent *event,
                      AliAODEvent *aod_event,
                      std::vector<AliTrackContainer*> *track_containers,

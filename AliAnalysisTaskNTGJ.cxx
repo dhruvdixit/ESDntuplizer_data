@@ -391,11 +391,11 @@ Bool_t AliAnalysisTaskNTGJ::Run()
 
     if (mc_container) {
         getPrimaryMCParticles(mc_container,
-                              &stored_mc_truth_index,
-                              &reverse_stored_mc_truth_index,
-                              &reverse_stored_parton_algorithmic_index);
+                              stored_mc_truth_index,
+                              reverse_stored_mc_truth_index,
+                              reverse_stored_parton_algorithmic_index);
     }
-
+    
     doTrackLoop(event, aod_event, track_containers, mc_container, stored_mc_truth_index, primary_vertex); // Dhruv
 
     if (mc_container) {
@@ -951,27 +951,27 @@ void AliAnalysisTaskNTGJ::getMetadata(AliESDEvent *esd_event,
 
 // =================================================================================================================
 void AliAnalysisTaskNTGJ::getPrimaryMCParticles(AliMCParticleContainer *mc_container,
-        std::vector<size_t> *stored_mc_truth_index,
-        std::vector<Int_t> *reverse_stored_mc_truth_index,
-        std::vector<Int_t> *reverse_stored_parton_algorithmic_index)
+        std::vector<size_t> &stored_mc_truth_index,
+        std::vector<Int_t> &reverse_stored_mc_truth_index,
+        std::vector<Int_t> &reverse_stored_parton_algorithmic_index)
 {
     // lines 948-998
     AliDebugStream(3) << "loops 1 and 2 through MC container" << std::endl;
 
-    stored_mc_truth_index->resize(mc_container->GetNParticles(), ULONG_MAX);
+    stored_mc_truth_index.resize(mc_container->GetNParticles(), ULONG_MAX);
     size_t nmc_truth = 0;
     for (Int_t i = 0; i < mc_container->GetNParticles(); i++) {
         // Bookkeeping for primary final state particles
         if (final_state_primary(mc_container, i)) {
-            stored_mc_truth_index->at(i) = nmc_truth;
-            reverse_stored_mc_truth_index->push_back(i);
+            stored_mc_truth_index.at(i) = nmc_truth;
+            reverse_stored_mc_truth_index.push_back(i);
             nmc_truth++;
         }
 
 
         // Bookkeeping for partons
         if (parton_cms_algorithmic(mc_container, i)) {
-            reverse_stored_parton_algorithmic_index->push_back(i);
+            reverse_stored_parton_algorithmic_index.push_back(i);
         }
     }
 
@@ -1003,7 +1003,7 @@ void AliAnalysisTaskNTGJ::getPrimaryMCParticles(AliMCParticleContainer *mc_conta
             }
         }
         if (has_physical_primary_ancestor) {
-            stored_mc_truth_index->at(i) = stored_mc_truth_index->at(j);
+            stored_mc_truth_index.at(i) = stored_mc_truth_index.at(j);
         }
     }
 }
@@ -1670,7 +1670,7 @@ void AliAnalysisTaskNTGJ::getTruthIsolation(AliClusterContainer *cluster_contain
         bool subtract_ue,
         std::set<Int_t> cluster_mc_truth_index)
 {
-    Int_t icluster = 0;
+    UInt_t icluster = 0;
     for (auto cluster : cluster_container->accepted()) {
 
         AliVCluster *c = cluster;
