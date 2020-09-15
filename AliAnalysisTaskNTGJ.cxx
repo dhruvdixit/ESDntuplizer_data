@@ -404,8 +404,13 @@ Bool_t AliAnalysisTaskNTGJ::Run()
                          reverse_stored_mc_truth_index);
     }
 
-    doClusterLoop(event, emcal_cell, cluster_container, track_containers, mc_container, stored_mc_truth_index);
-    getUEJetsIsolation(esd_event, mc_container, reverse_stored_mc_truth_index);
+    std::set<Int_t> cluster_mc_truth_index;
+    doClusterLoop(event, emcal_cell, cluster_container, track_containers, mc_container, stored_mc_truth_index, cluster_mc_truth_index);
+    getUEJetsIsolation(esd_event,
+                       mc_container,
+                       cluster_container,
+                       reverse_stored_mc_truth_index,
+                       cluster_mc_truth_index);
     skimJets();
     fillCellBranches(emcal_cell, stored_mc_truth_index);
     fillMuonBranches();
@@ -1241,7 +1246,8 @@ void AliAnalysisTaskNTGJ::doClusterLoop(AliVEvent *event,
                                         AliClusterContainer *cluster_container,
                                         std::vector<AliTrackContainer*> *track_containers,
                                         AliMCParticleContainer *mc_container,
-                                        std::vector<size_t> stored_mc_truth_index)
+                                        std::vector<size_t> stored_mc_truth_index,
+                                        std::set<Int_t> &cluster_mc_truth_index)
 {
     AliVVZERO *v0 = event->GetVZEROData();
 
@@ -1278,7 +1284,7 @@ void AliAnalysisTaskNTGJ::doClusterLoop(AliVEvent *event,
 
         AliVCluster *c = _nrandom_isolation > 0 ? &dummy_cluster : cluster;
 
-        fillClusterBranches(emcal_cell, c, i, stored_mc_truth_index);
+        fillClusterBranches(emcal_cell, c, i, stored_mc_truth_index, cluster_mc_truth_index);
 
         //-------------------
         // Neural Net Branches
@@ -1297,7 +1303,8 @@ void AliAnalysisTaskNTGJ::doClusterLoop(AliVEvent *event,
 void AliAnalysisTaskNTGJ::fillClusterBranches(AliVCaloCells *emcal_cell,
         AliVCluster *c,
         Int_t i,
-        std::vector<size_t> stored_mc_truth_index)
+        std::vector<size_t> stored_mc_truth_index,
+        std::set<Int_t> &cluster_mc_truth_index)
 {
     // lines 1701-1830
     //FIXME: change away from single letter variables...
@@ -1383,7 +1390,6 @@ void AliAnalysisTaskNTGJ::fillClusterBranches(AliVCaloCells *emcal_cell,
         c->GetNLabels();
 
     std::vector<std::pair<float, unsigned short> > mc_truth_energy_index;
-    std::set<Int_t> cluster_mc_truth_index;
 
     for (UInt_t j = 0; j < c->GetNLabels(); j++) {
         const Int_t mc_truth_index = c->GetLabelAt(j);
@@ -1461,7 +1467,9 @@ void AliAnalysisTaskNTGJ::fillPhotonNNBranches(AliVCluster *c,
 
 void AliAnalysisTaskNTGJ::getUEJetsIsolation(AliESDEvent *esd_event,
         AliMCParticleContainer *mc_container,
-        std::vector<Int_t> reverse_stored_mc_truth_index)
+        AliClusterContainer *cluster_container,
+        std::vector<Int_t> reverse_stored_mc_truth_index,
+        std::set<Int_t> cluster_mc_truth_index)
 {
     // A value of 2^(-30) < 10^(-9) would map a 10 TeV particle to
     // less than 10 MeV, sufficient to remove any significant momentum
@@ -1476,9 +1484,11 @@ void AliAnalysisTaskNTGJ::getUEJetsIsolation(AliESDEvent *esd_event,
 
     getTruthJetsAndIsolation(esd_event,
                              mc_container,
+                             cluster_container,
                              reverse_stored_mc_truth_index,
                              jet_truth_ak04,
-                             jet_charged_truth_ak04);
+                             jet_charged_truth_ak04,
+                             cluster_mc_truth_index);
 
     getTpcUEJetsIsolation();
     getItsUEJetsIsolation();
@@ -1488,11 +1498,13 @@ void AliAnalysisTaskNTGJ::getUEJetsIsolation(AliESDEvent *esd_event,
 void AliAnalysisTaskNTGJ::getTruthJetsAndIsolation(
     AliESDEvent *esd_event,
     AliMCParticleContainer *mc_container,
+    AliClusterContainer *cluster_container,
     std::vector<Int_t> reverse_stored_mc_truth_index,
     std::vector<fastjet::PseudoJet> &jet_truth_ak04,
-    std::vector<fastjet::PseudoJet> &jet_charged_truth_ak04)
+    std::vector<fastjet::PseudoJet> &jet_charged_truth_ak04,
+    std::set<Int_t> cluster_mc_truth_index)
 {
-    // lines 1283-1320, 1365-1411, 1476-1490, 1521, 1527-1528
+    // lines 1283-1292
     enum {
         BEAM_PARTICLE_P = 1001
     };
@@ -1504,6 +1516,44 @@ void AliAnalysisTaskNTGJ::getTruthJetsAndIsolation(
           esd_event->GetBeamParticle(1) == BEAM_PARTICLE_P) :
         false;
 
+    getTruthJets(mc_container, subtract_ue, reverse_stored_mc_truth_index, jet_truth_ak04, jet_charged_truth_ak04);
+    getTruthIsolation(cluster_container, mc_container, subtract_ue, cluster_mc_truth_index);
+}
+
+void AliAnalysisTaskNTGJ::getTpcUEJetsIsolation()
+{
+    // initialize vectors
+    // calculate area
+    // calculate UE
+    // calculate isolation
+    // reconstruct and fill jets
+}
+
+void AliAnalysisTaskNTGJ::getItsUEJetsIsolation()
+{
+    // initialize vectors
+    // calculate area
+    // calculate UE
+    // calculate isolation
+    // reconstruct and fill jets
+}
+
+void AliAnalysisTaskNTGJ::getClusterUEIsolation()
+{
+    // initialize vectors
+    // calculate area
+    // calculate UE
+    // calculate isolation
+}
+
+void AliAnalysisTaskNTGJ::getTruthJets(
+    AliMCParticleContainer *mc_container,
+    bool subtract_ue,
+    std::vector<Int_t> reverse_stored_mc_truth_index,
+    std::vector<fastjet::PseudoJet> &jet_truth_ak04,
+    std::vector<fastjet::PseudoJet> &jet_charged_truth_ak04)
+{
+    // lines 1294-1320, 1365-1411, 1476-1490, 1521, 1527-1528, 1540-1545
     static const double jet_antikt_d_04 = 0.4;
 
     std::vector<fastjet::PseudoJet> particle_truth;
@@ -1606,32 +1656,129 @@ void AliAnalysisTaskNTGJ::getTruthJetsAndIsolation(
     FILL_BRANCH_JET_TRUTH(truth, ak04, jet_truth_ak04);
     FILL_BRANCH_JET_TRUTH(charged_truth, ak04,
                           jet_charged_truth_ak04);
+
+    if (cluster_sequence_truth != NULL) {
+        delete cluster_sequence_truth;
+    }
+    if (cluster_sequence_charged_truth != NULL) {
+        delete cluster_sequence_charged_truth;
+    }
 }
 
-void AliAnalysisTaskNTGJ::getTpcUEJetsIsolation()
+void AliAnalysisTaskNTGJ::getTruthIsolation(AliClusterContainer *cluster_container,
+        AliMCParticleContainer *mc_container,
+        bool subtract_ue,
+        std::set<Int_t> cluster_mc_truth_index)
 {
-    // initialize vectors
-    // calculate area
-    // calculate UE
-    // calculate isolation
-    // reconstruct and fill jets
-}
+    Int_t icluster = 0;
+    for (auto cluster : cluster_container->accepted()) {
 
-void AliAnalysisTaskNTGJ::getItsUEJetsIsolation()
-{
-    // initialize vectors
-    // calculate area
-    // calculate UE
-    // calculate isolation
-    // reconstruct and fill jets
-}
+        AliVCluster *c = cluster;
+        TLorentzVector p;
+        c->GetMomentum(p, _branch_primary_vertex);
 
-void AliAnalysisTaskNTGJ::getClusterUEIsolation()
-{
-    // initialize vectors
-    // calculate area
-    // calculate UE
-    // calculate isolation
+        if (mc_container) {
+            double cluster_iso_01_truth = 0;
+            double cluster_iso_02_truth = 0;
+            double cluster_iso_03_truth = 0;
+            double cluster_iso_04_truth = 0;
+
+            std::vector<std::pair<double, double> > delta_vs_iso;
+
+            for (Int_t j = 0;
+                    j < mc_container->GetNParticles(); j++) {
+                if (final_state_primary(mc_container, j) &&
+                        cluster_mc_truth_index.find(j) ==
+                        cluster_mc_truth_index.end()) {
+                    const AliAODMCParticle *t = mc_container->GetMCParticle(j);
+
+                    // charged particles only in jet truth
+                    if (t->Charge() != 0) {
+                        if (t->GetGeneratorIndex() != 0 || !subtract_ue) {
+                            const double dpseudorapidity =
+                                t->Eta() - p.Eta();
+                            const double dazimuth = angular_range_reduce(
+                                                        angular_range_reduce(t->Phi()) -
+                                                        angular_range_reduce(p.Phi()));
+                            const double dr_2 =
+                                std::pow(dpseudorapidity, 2) +
+                                std::pow(dazimuth, 2);
+                            if (dr_2 < 0.1 * 0.1) {
+                                cluster_iso_01_truth += t->Pt();
+                            }
+                            if (dr_2 < 0.2 * 0.2) {
+                                cluster_iso_02_truth += t->Pt();
+                            }
+                            if (dr_2 < 0.3 * 0.3) {
+                                cluster_iso_03_truth += t->Pt();
+                            }
+                            if (dr_2 < 0.4 * 0.4) {
+                                cluster_iso_04_truth += t->Pt();
+                                delta_vs_iso.push_back(
+                                    std::pair<double, double>(
+                                        sqrt(dr_2), t->Pt()));
+                            }
+                        }
+                    }
+                }
+            }
+            _branch_cluster_iso_01_truth[icluster] =
+                half(cluster_iso_01_truth);
+            _branch_cluster_iso_02_truth[icluster] =
+                half(cluster_iso_02_truth);
+            _branch_cluster_iso_03_truth[icluster] =
+                half(cluster_iso_03_truth);
+            _branch_cluster_iso_04_truth[icluster] =
+                half(cluster_iso_04_truth);
+
+            _branch_cluster_frixione_04_02_truth[icluster] =
+                half(frixione_iso_max_x_e_eps(delta_vs_iso,
+                                              0.4, 0.2));
+            _branch_cluster_frixione_04_05_truth[icluster] =
+                half(frixione_iso_max_x_e_eps(delta_vs_iso,
+                                              0.4, 0.5));
+            _branch_cluster_frixione_04_10_truth[icluster] =
+                half(frixione_iso_max_x_e_eps(delta_vs_iso,
+                                              0.4, 1.0));
+
+            _branch_cluster_anti_frixione_04_02_truth
+            [icluster] =
+                half(anti_frixione_iso_max_x_e_eps(delta_vs_iso,
+                                                   0.4, 0.2));
+            _branch_cluster_anti_frixione_04_05_truth
+            [icluster] =
+                half(anti_frixione_iso_max_x_e_eps(delta_vs_iso,
+                                                   0.4, 0.5));
+            _branch_cluster_anti_frixione_04_10_truth
+            [icluster] =
+                half(anti_frixione_iso_max_x_e_eps(delta_vs_iso,
+                                                   0.4, 1.0));
+        } else {
+            _branch_cluster_iso_01_truth[icluster] = NAN;
+            _branch_cluster_iso_02_truth[icluster] = NAN;
+            _branch_cluster_iso_03_truth[icluster] = NAN;
+            _branch_cluster_iso_04_truth[icluster] = NAN;
+
+            _branch_cluster_frixione_04_02_truth[icluster] =
+                NAN;
+            _branch_cluster_frixione_04_05_truth[icluster] =
+                NAN;
+            _branch_cluster_frixione_04_10_truth[icluster] =
+                NAN;
+
+            _branch_cluster_anti_frixione_04_02_truth
+            [icluster] = NAN;
+            _branch_cluster_anti_frixione_04_05_truth
+            [icluster] = NAN;
+            _branch_cluster_anti_frixione_04_10_truth
+            [icluster] = NAN;
+        }
+
+        icluster++;
+        if (icluster >= NCLUSTER_MAX) {
+            break;
+        }
+    }
 }
 
 void AliAnalysisTaskNTGJ::skimJets()

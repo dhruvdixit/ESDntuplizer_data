@@ -537,11 +537,13 @@ private:
                        AliClusterContainer *cluster_container,
                        std::vector<AliTrackContainer*> *track_containers,
                        AliMCParticleContainer *mc_container,
-                       std::vector<size_t> stored_mc_truth_index);
+                       std::vector<size_t> stored_mc_truth_index,
+                       std::set<Int_t> &cluster_mc_truth_index);
     void fillClusterBranches(AliVCaloCells *emcal_cell,
                              AliVCluster *c,
                              Int_t i, // i is cluster index in loop
-                             std::vector<size_t> stored_mc_truth_index);
+                             std::vector<size_t> stored_mc_truth_index,
+                             std::set<Int_t> &cluster_mc_truth_index);
     void fillIsolationBranches(AliClusterContainer *cluster_container,
                                std::vector<AliTrackContainer*> *track_containers,
                                AliMCParticleContainer *mc_container);
@@ -551,15 +553,28 @@ private:
                               AliVVZERO *v0);
     void getUEJetsIsolation(AliESDEvent *esd_event,
                             AliMCParticleContainer *mc_container,
-                            std::vector<Int_t> reverse_stored_mc_truth_index);
+                            AliClusterContainer *cluster_container,
+                            std::vector<Int_t> reverse_stored_mc_truth_index,
+                            std::set<Int_t> cluster_mc_truth_index);
     void getTruthJetsAndIsolation(AliESDEvent *esd_event,
                                   AliMCParticleContainer *mc_container,
+                                  AliClusterContainer *cluster_container,
                                   std::vector<Int_t> reverse_stored_mc_truth_index,
                                   std::vector<fastjet::PseudoJet> &jet_truth_ak04,
-                                  std::vector<fastjet::PseudoJet> &jet_charged_truth_ak04);
+                                  std::vector<fastjet::PseudoJet> &jet_charged_truth_ak04,
+                                  std::set<Int_t> cluster_mc_truth_index);
     void getTpcUEJetsIsolation();
     void getItsUEJetsIsolation();
     void getClusterUEIsolation();
+    void getTruthJets(AliMCParticleContainer *mc_container,
+                      bool subtract_ue,
+                      std::vector<Int_t> reverse_stored_mc_truth_index,
+                      std::vector<fastjet::PseudoJet> &jet_truth_ak04,
+                      std::vector<fastjet::PseudoJet> &jet_charged_truth_ak04);
+    void getTruthIsolation(AliClusterContainer *cluster_container,
+                           AliMCParticleContainer *mc_container,
+                           bool subtract_ue,
+                           std::set<Int_t> cluster_mc_truth_index);
     void skimJets();
     void fillCellBranches(AliVCaloCells *emcal_cell,
                           std::vector<size_t> stored_mc_truth_index);
