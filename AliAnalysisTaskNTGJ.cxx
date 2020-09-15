@@ -396,11 +396,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
                               &reverse_stored_parton_algorithmic_index);
     }
 
-    initializeFastjetVectors();
     doTrackLoop(event, aod_event, track_containers, mc_container, stored_mc_truth_index, primary_vertex); // Dhruv
-    doClusterLoopForAreaDetermination();
-    computeVoronoiAreas();
-    initializeMoreFastjetVectors();
 
     if (mc_container) {
         doMCParticleLoop(mc_container,
@@ -408,12 +404,8 @@ Bool_t AliAnalysisTaskNTGJ::Run()
                          reverse_stored_mc_truth_index);
     }
 
-    fastjetTruthJets();
-    doClusterLoopForJets();
-    doManyFastjetThings();
-    getUEEstimate();
     doClusterLoop(event, emcal_cell, cluster_container, track_containers, mc_container, stored_mc_truth_index);
-    fillJetBranches();
+    getUEJetsIsolation();
     skimJets();
     fillCellBranches(emcal_cell, stored_mc_truth_index);
     fillMuonBranches();
@@ -1011,11 +1003,6 @@ void AliAnalysisTaskNTGJ::getPrimaryMCParticles(AliMCParticleContainer *mc_conta
     }
 }
 // =================================================================================================================
-void AliAnalysisTaskNTGJ::initializeFastjetVectors()
-{
-
-}
-
 void AliAnalysisTaskNTGJ::doTrackLoop(AliVEvent *event,
                                       AliAODEvent *aod_event,
                                       std::vector<AliTrackContainer*> *track_containers,
@@ -1147,20 +1134,6 @@ void AliAnalysisTaskNTGJ::doTrackLoop(AliVEvent *event,
     }
 }
 
-void AliAnalysisTaskNTGJ::doClusterLoopForAreaDetermination()
-{
-
-}
-
-void AliAnalysisTaskNTGJ::computeVoronoiAreas()
-{
-
-}
-
-void AliAnalysisTaskNTGJ::initializeMoreFastjetVectors()
-{
-
-}
 // =================================================================================================================
 void AliAnalysisTaskNTGJ::doMCParticleLoop(AliMCParticleContainer *mc_container,
         AliESDEvent *esd_event,
@@ -1305,26 +1278,6 @@ void AliAnalysisTaskNTGJ::doMCParticleLoop(AliMCParticleContainer *mc_container,
 
 }
 // =================================================================================================================
-void AliAnalysisTaskNTGJ::fastjetTruthJets()
-{
-
-}
-
-void AliAnalysisTaskNTGJ::doClusterLoopForJets()
-{
-
-}
-
-void AliAnalysisTaskNTGJ::doManyFastjetThings()
-{
-
-}
-
-void AliAnalysisTaskNTGJ::getUEEstimate()
-{
-
-}
-
 void AliAnalysisTaskNTGJ::doClusterLoop(AliVEvent *event,
                                         AliVCaloCells *emcal_cell,
                                         AliClusterContainer *cluster_container,
@@ -1368,12 +1321,6 @@ void AliAnalysisTaskNTGJ::doClusterLoop(AliVEvent *event,
         AliVCluster *c = _nrandom_isolation > 0 ? &dummy_cluster : cluster;
 
         fillClusterBranches(emcal_cell, c, i, stored_mc_truth_index);
-
-        //------------------
-        // Isolation Branches
-        //------------------
-        // lines 1832-2295
-        fillIsolationBranches(cluster_container, track_containers, mc_container);
 
         //-------------------
         // Neural Net Branches
@@ -1528,13 +1475,6 @@ void AliAnalysisTaskNTGJ::fillClusterBranches(AliVCaloCells *emcal_cell,
     }
 }
 
-void AliAnalysisTaskNTGJ::fillIsolationBranches(AliClusterContainer *cluster_container,
-        std::vector<AliTrackContainer*> *track_containers,
-        AliMCParticleContainer *mc_container)
-{
-    // lines 1832-2295
-}
-
 void AliAnalysisTaskNTGJ::fillPhotonNNBranches(AliVCluster *c,
         std::vector<size_t> stored_mc_truth_index,
         AliVCaloCells *emcal_cell,
@@ -1561,9 +1501,43 @@ void AliAnalysisTaskNTGJ::fillPhotonNNBranches(AliVCluster *c,
 }
 
 
-void AliAnalysisTaskNTGJ::fillJetBranches()
+void AliAnalysisTaskNTGJ::getUEJetsIsolation()
+{
+    getTruthJetsAndIsolation();
+    getTpcUEJetsIsolation();
+    getItsUEJetsIsolation();
+    getClusterUEIsolation();
+}
+
+void AliAnalysisTaskNTGJ::getTruthJetsAndIsolation()
 {
 
+}
+
+void AliAnalysisTaskNTGJ::getTpcUEJetsIsolation()
+{
+    // initialize vectors
+    // calculate area
+    // calculate UE
+    // calculate isolation
+    // reconstruct and fill jets
+}
+
+void AliAnalysisTaskNTGJ::getItsUEJetsIsolation()
+{
+    // initialize vectors
+    // calculate area
+    // calculate UE
+    // calculate isolation
+    // reconstruct and fill jets    
+}
+
+void AliAnalysisTaskNTGJ::getClusterUEIsolation()
+{
+    // initialize vectors
+    // calculate area
+    // calculate UE
+    // calculate isolation
 }
 
 void AliAnalysisTaskNTGJ::skimJets()

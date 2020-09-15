@@ -519,23 +519,15 @@ private:
                                std::vector<size_t> *stored_mc_truth_index,
                                std::vector<Int_t> *reverse_stored_mc_truth_index,
                                std::vector<Int_t> *reverse_stored_parton_algorithmic_index);
-    void initializeFastjetVectors();
     void doTrackLoop(AliVEvent *event,
                      AliAODEvent *aod_event,
                      std::vector<AliTrackContainer*> *track_containers,
                      AliMCParticleContainer *mc_container,
                      std::vector<size_t> stored_mc_truth_index,
                      const AliVVertex *primary_vertex);
-    void doClusterLoopForAreaDetermination();
-    void computeVoronoiAreas();
-    void initializeMoreFastjetVectors();
     void doMCParticleLoop(AliMCParticleContainer *mc_container,
                           AliESDEvent *esd_event,
                           std::vector<Int_t> reverse_stored_mc_truth_index);
-    void fastjetTruthJets();
-    void doClusterLoopForJets();
-    void doManyFastjetThings();
-    void getUEEstimate();
     void doClusterLoop(AliVEvent *event,
                        AliVCaloCells *emcal_cell,
                        AliClusterContainer *cluster_container,
@@ -553,7 +545,11 @@ private:
                               std::vector<size_t> stored_mc_truth_index,
                               AliVCaloCells *emcal_cell,
                               AliVVZERO *v0);
-    void fillJetBranches();
+    void getUEJetsIsolation();
+    void getTruthJetsAndIsolation();
+    void getTpcUEJetsIsolation();
+    void getItsUEJetsIsolation();
+    void getClusterUEIsolation();
     void skimJets();
     void fillCellBranches(AliVCaloCells *emcal_cell,
                           std::vector<size_t> stored_mc_truth_index);
