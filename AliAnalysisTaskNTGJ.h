@@ -18,6 +18,10 @@
 #include <AliAnalysisTaskEmcal.h>
 #include <AliAnalysisAlien.h>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weffc++"
+#include <fastjet/PseudoJet.hh>
+
 #define EMCAL_NCELL         17664
 #define NTRIGGER_CLASS_MAX  100 // = AliESDRun::kNTriggerClasses
 
@@ -545,8 +549,14 @@ private:
                               std::vector<size_t> stored_mc_truth_index,
                               AliVCaloCells *emcal_cell,
                               AliVVZERO *v0);
-    void getUEJetsIsolation();
-    void getTruthJetsAndIsolation();
+    void getUEJetsIsolation(AliESDEvent *esd_event,
+                            AliMCParticleContainer *mc_container,
+                            std::vector<Int_t> reverse_stored_mc_truth_index);
+    void getTruthJetsAndIsolation(AliESDEvent *esd_event,
+                                  AliMCParticleContainer *mc_container,
+                                  std::vector<Int_t> reverse_stored_mc_truth_index,
+                                  std::vector<fastjet::PseudoJet> &jet_truth_ak04,
+                                  std::vector<fastjet::PseudoJet> &jet_charged_truth_ak04);
     void getTpcUEJetsIsolation();
     void getItsUEJetsIsolation();
     void getClusterUEIsolation();

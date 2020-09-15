@@ -405,7 +405,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
     }
 
     doClusterLoop(event, emcal_cell, cluster_container, track_containers, mc_container, stored_mc_truth_index);
-    getUEJetsIsolation();
+    getUEJetsIsolation(esd_event, mc_container, reverse_stored_mc_truth_index);
     skimJets();
     fillCellBranches(emcal_cell, stored_mc_truth_index);
     fillMuonBranches();
@@ -1139,34 +1139,11 @@ void AliAnalysisTaskNTGJ::doMCParticleLoop(AliMCParticleContainer *mc_container,
         AliESDEvent *esd_event,
         std::vector<Int_t> reverse_stored_mc_truth_index)
 {
-    // lines 1336-1376, 1406-1474
+    // lines 1336-1363, 1412-1474
     AliDebugStream(3) << "loop 3 through MC container" << std::endl;
-
-    enum {
-        BEAM_PARTICLE_P = 1001
-    };
-
-    const bool subtract_ue =
-        _force_ue_subtraction ? true :
-        esd_event != NULL ?
-        !(esd_event->GetBeamParticle(0) == BEAM_PARTICLE_P &&
-          esd_event->GetBeamParticle(1) == BEAM_PARTICLE_P) :
-        false;
 
     // may need to move this outside of this function
     _branch_nmc_truth = 0;
-
-    enum {
-        PDG_CODE_ELECTRON_MINUS             = 11,
-        PDG_CODE_ELECTRON_NEUTRINO          = 12,
-        PDG_CODE_MUON_MINUS                 = 13,
-        PDG_CODE_MUON_NEUTRINO              = 14,
-        PDG_CODE_TAU_MINUS                  = 15,
-        PDG_CODE_TAU_NEUTRINO               = 16,
-        PDG_CODE_PHOTON                     = 22,
-    };
-
-    double met_truth_kahan_error[2] = { 0, 0 };
 
     for (std::vector<Int_t>::const_iterator iterator =
                 reverse_stored_mc_truth_index.begin();
@@ -1191,25 +1168,6 @@ void AliAnalysisTaskNTGJ::doMCParticleLoop(AliMCParticleContainer *mc_container,
                 UCHAR_MAX;
             _branch_nmc_truth++;
             continue;
-        }
-
-        if (p->GetGeneratorIndex() != 0 || !subtract_ue) {
-            const unsigned int abs_pdg_code =
-                std::abs(p->PdgCode());
-
-            switch (abs_pdg_code) {
-            case PDG_CODE_ELECTRON_NEUTRINO:
-            case PDG_CODE_MUON_NEUTRINO:
-            case PDG_CODE_TAU_NEUTRINO:
-                // Remove all (stable) neutrinos from the truth
-                // jet definition
-                break;
-            default:
-                kahan_sum(_branch_met_truth[0],
-                          met_truth_kahan_error[0], p->Px());
-                kahan_sum(_branch_met_truth[1],
-                          met_truth_kahan_error[1], p->Py());
-            }
         }
 
         _branch_mc_truth_e[_branch_nmc_truth] = half(p->E());
@@ -1501,17 +1459,153 @@ void AliAnalysisTaskNTGJ::fillPhotonNNBranches(AliVCluster *c,
 }
 
 
-void AliAnalysisTaskNTGJ::getUEJetsIsolation()
+void AliAnalysisTaskNTGJ::getUEJetsIsolation(AliESDEvent *esd_event,
+        AliMCParticleContainer *mc_container,
+        std::vector<Int_t> reverse_stored_mc_truth_index)
 {
-    getTruthJetsAndIsolation();
+    // A value of 2^(-30) < 10^(-9) would map a 10 TeV particle to
+    // less than 10 MeV, sufficient to remove any significant momentum
+    // bias while not being too greedy to limit the exponent range.
+    // Ghost scaling factor is chosen as power of two to maintain the
+    // multiplication/division being numerically exact (provided px,
+    // py, pz >= 2^(-1022+30) which is of the order 10^(-290) eV).
+    static const double scale_ghost = pow(2.0, -30.0);
+
+    std::vector<fastjet::PseudoJet> jet_truth_ak04;         // truth anti-kT jets
+    std::vector<fastjet::PseudoJet> jet_charged_truth_ak04; // truth anti-kT charged jets
+
+    getTruthJetsAndIsolation(esd_event,
+                             mc_container,
+                             reverse_stored_mc_truth_index,
+                             jet_truth_ak04,
+                             jet_charged_truth_ak04);
+
     getTpcUEJetsIsolation();
     getItsUEJetsIsolation();
     getClusterUEIsolation();
 }
 
-void AliAnalysisTaskNTGJ::getTruthJetsAndIsolation()
+void AliAnalysisTaskNTGJ::getTruthJetsAndIsolation(
+    AliESDEvent *esd_event,
+    AliMCParticleContainer *mc_container,
+    std::vector<Int_t> reverse_stored_mc_truth_index,
+    std::vector<fastjet::PseudoJet> &jet_truth_ak04,
+    std::vector<fastjet::PseudoJet> &jet_charged_truth_ak04)
 {
+    // lines 1283-1320, 1365-1411, 1476-1490, 1521, 1527-1528
+    enum {
+        BEAM_PARTICLE_P = 1001
+    };
 
+    const bool subtract_ue =
+        _force_ue_subtraction ? true :
+        esd_event != NULL ?
+        !(esd_event->GetBeamParticle(0) == BEAM_PARTICLE_P &&
+          esd_event->GetBeamParticle(1) == BEAM_PARTICLE_P) :
+        false;
+
+    static const double jet_antikt_d_04 = 0.4;
+
+    std::vector<fastjet::PseudoJet> particle_truth;
+    fastjet::ClusterSequenceArea *cluster_sequence_truth = NULL;
+    std::vector<fastjet::PseudoJet> particle_charged_truth;
+    fastjet::ClusterSequenceArea *cluster_sequence_charged_truth = NULL;
+
+    // PDG Monte Carlo number scheme
+
+    enum {
+        PDG_CODE_ELECTRON_MINUS             = 11,
+        PDG_CODE_ELECTRON_NEUTRINO          = 12,
+        PDG_CODE_MUON_MINUS                 = 13,
+        PDG_CODE_MUON_NEUTRINO              = 14,
+        PDG_CODE_TAU_MINUS                  = 15,
+        PDG_CODE_TAU_NEUTRINO               = 16,
+        PDG_CODE_PHOTON                     = 22,
+    };
+
+    std::fill(_branch_met_truth,
+              _branch_met_truth + sizeof(_branch_met_truth) /
+              sizeof(*_branch_met_truth), 0);
+
+    if (mc_container) {
+        double met_truth_kahan_error[2] = { 0, 0 };
+
+        for (std::vector<Int_t>::const_iterator iterator =
+                    reverse_stored_mc_truth_index.begin();
+                iterator != reverse_stored_mc_truth_index.end();
+                iterator++) {
+            const AliAODMCParticle *p = mc_container->GetMCParticle(*iterator);
+
+            if (p->GetGeneratorIndex() != 0 || !subtract_ue) {
+                const unsigned int abs_pdg_code =
+                    std::abs(p->PdgCode());
+
+                switch (abs_pdg_code) {
+                case PDG_CODE_ELECTRON_NEUTRINO:
+                case PDG_CODE_MUON_NEUTRINO:
+                case PDG_CODE_TAU_NEUTRINO:
+                    // Remove all (stable) neutrinos from the truth
+                    // jet definition
+                    break;
+                default:
+                    particle_truth.push_back(fastjet::PseudoJet(
+                                                 p->Px(), p->Py(), p->Pz(), p->P()));
+                    switch (abs_pdg_code) {
+                    case PDG_CODE_ELECTRON_MINUS:
+                    case PDG_CODE_PHOTON:
+                        particle_truth.back().
+                        set_user_index(USER_INDEX_EM);
+                        break;
+                    case PDG_CODE_MUON_MINUS:
+                        particle_truth.back().
+                        set_user_index(USER_INDEX_MUON);
+                        break;
+                    }
+                    // Fill again for charged particle
+                    if (p->Charge() != 0) {
+                        particle_charged_truth.push_back(fastjet::PseudoJet(
+                                                             p->Px(), p->Py(), p->Pz(), p->P()));
+                        switch (abs_pdg_code) {
+                        case PDG_CODE_ELECTRON_MINUS:
+                        case PDG_CODE_PHOTON:
+                            particle_charged_truth.back().
+                            set_user_index(USER_INDEX_EM);
+                            break;
+                        case PDG_CODE_MUON_MINUS:
+                            particle_charged_truth.back().
+                            set_user_index(USER_INDEX_MUON);
+                            break;
+                        }
+                    }
+                    kahan_sum(_branch_met_truth[0],
+                              met_truth_kahan_error[0], p->Px());
+                    kahan_sum(_branch_met_truth[1],
+                              met_truth_kahan_error[1], p->Py());
+                }
+            }
+        }
+
+        // run anti-kT clustering algorithm
+        cluster_sequence_truth = new fastjet::ClusterSequenceArea(
+            particle_truth,
+            fastjet::JetDefinition(fastjet::JetDefinition(
+                                       fastjet::antikt_algorithm, jet_antikt_d_04)),
+            fastjet::VoronoiAreaSpec());
+        jet_truth_ak04 = cluster_sequence_truth->inclusive_jets(0);
+
+        cluster_sequence_charged_truth =
+            new fastjet::ClusterSequenceArea(
+            particle_charged_truth,
+            fastjet::JetDefinition(fastjet::JetDefinition(
+                                       fastjet::antikt_algorithm, jet_antikt_d_04)),
+            fastjet::VoronoiAreaSpec());
+        jet_charged_truth_ak04 =
+            cluster_sequence_charged_truth->inclusive_jets(0);
+    }
+
+    FILL_BRANCH_JET_TRUTH(truth, ak04, jet_truth_ak04);
+    FILL_BRANCH_JET_TRUTH(charged_truth, ak04,
+                          jet_charged_truth_ak04);
 }
 
 void AliAnalysisTaskNTGJ::getTpcUEJetsIsolation()
@@ -1529,7 +1623,7 @@ void AliAnalysisTaskNTGJ::getItsUEJetsIsolation()
     // calculate area
     // calculate UE
     // calculate isolation
-    // reconstruct and fill jets    
+    // reconstruct and fill jets
 }
 
 void AliAnalysisTaskNTGJ::getClusterUEIsolation()
