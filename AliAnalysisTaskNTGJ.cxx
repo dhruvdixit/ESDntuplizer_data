@@ -1967,6 +1967,7 @@ void AliAnalysisTaskNTGJ::getVoronoiAreaIts(
     std::map<size_t, size_t> &track_reco_index_its,
     std::vector<double> &particle_reco_area_its)
 {
+    // lines 1051-1055, 1173-1181, 1256-1270
     std::vector<size_t> reco_stored_track_index_its;            // index for filling voronoi area branch
     std::vector<point_2d_t> particle_reco_area_estimation_its;  // used for area calculation
     std::vector<std::set<size_t> > particle_reco_incident_its;  // unused variable as part of area calculation
@@ -1981,7 +1982,8 @@ void AliAnalysisTaskNTGJ::getVoronoiAreaIts(
 
             AliAODTrack * t = static_cast<AliAODTrack*>(track);
 
-            if (trackPassesCut4(t)) {
+            // eventually switch this back to trackPassesCut4 when that doesn't need the event itself anymore
+            if ((_branch_track_quality[itrack] & 16) != 0) {
                 track_reco_index_its[itrack] = particle_reco_its.size();
                 reco_stored_track_index_its.push_back(itrack);
                 particle_reco_its.push_back(fastjet::PseudoJet(
@@ -2128,7 +2130,7 @@ void AliAnalysisTaskNTGJ::getUEIts(
     std::vector<double> particle_reco_area_its,
     std::pair<std::pair<std::vector<double>, std::vector<double>>, double> &ue_estimate_its)
 {
-    // lines 1596-1603, 1623-1646, 1656-1658
+    // lines 1604-1611, 1647-1650, 1659-1661
 
     // kT clustering
     static const double jet_kt_d_ue_estimation = 0.3;
@@ -2347,8 +2349,8 @@ void AliAnalysisTaskNTGJ::getIsolationIts(
 
                 AliAODTrack * t = static_cast<AliAODTrack*>(track);
 
-                // Apply PWG-JE cuts (track cuts 0 and 1)
-                if (trackPassesCut0(t) || trackPassesCut1(t)) {
+                // eventually switch this back to trackPassesCut4 when that doesn't need the event itself anymore
+                if ((_branch_track_quality[itrack] & 16) != 0) {
                     const double dpseudorapidity = t->Eta() - p.Eta();
                     const double dazimuth = angular_range_reduce(
                                                 angular_range_reduce(t->Phi()) -
@@ -2567,7 +2569,7 @@ void AliAnalysisTaskNTGJ::getJetsTpc(
     AliMCParticleContainer *mc_container,
     std::vector<Int_t> reverse_stored_parton_algorithmic_index)
 {
-    // lines 1551-1556, 1522-1523, 1527-1528, 1535-1536, 1551-1567, 2322-2327
+    // lines 1551-1556, 1522-1523, 1529-1530, 1535-1536, 1551-1567, 2322-2327
 
     std::vector<fastjet::PseudoJet> particle_reco_tagged_ak04tpc = particle_reco_tpc;
     static const double jet_antikt_d_04 = 0.4;
@@ -2638,7 +2640,7 @@ void AliAnalysisTaskNTGJ::getJetsIts(
     AliMCParticleContainer *mc_container,
     std::vector<Int_t> reverse_stored_parton_algorithmic_index)
 {
-    // lines 1551-1556, 1522-1523, 1527-1528, 1535-1536, 1551-1567, 2322-2327
+    // lines 1573-1580, 1524-1525, 1531-1532, 1537-1538, 1573-1589, 2328-2333
 
     std::vector<fastjet::PseudoJet> particle_reco_tagged_ak04its = particle_reco_its;
     static const double jet_antikt_d_04 = 0.4;
