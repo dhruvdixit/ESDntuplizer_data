@@ -584,26 +584,53 @@ private:
                                std::vector<fastjet::PseudoJet> jet_truth_ak04,
                                std::vector<fastjet::PseudoJet> jet_charged_truth_ak04,
                                fastjet::ClusterSequenceArea *cluster_sequence_truth);
-    void getItsUEJetsIsolation();
-    void getClusterUEIsolation();
+    void getItsUEJetsIsolation(std::vector<AliTrackContainer*> track_containers,
+                               AliClusterContainer *cluster_container,
+                               std::vector<bool> cell_pass_basic_quality,
+                               AliMCParticleContainer *mc_container,
+                               std::vector<Int_t> reverse_stored_parton_algorithmic_index,
+                               std::vector<fastjet::PseudoJet> jet_truth_ak04,
+                               std::vector<fastjet::PseudoJet> jet_charged_truth_ak04,
+                               fastjet::ClusterSequenceArea *cluster_sequence_truth);
+    void getClusterUEIsolation(AliClusterContainer *cluster_container,
+                               std::vector<bool> cell_pass_basic_quality);
     void getVoronoiAreaTpc(std::vector<AliTrackContainer*> track_containers,
                            std::vector<fastjet::PseudoJet> &particle_reco_tpc,
                            std::map<size_t, size_t> &track_reco_index_tpc,
                            std::vector<double> &particle_reco_area_tpc);
-    void getVoronoiAreaIts();
-    void getVoronoiAreaCluster();
+    void getVoronoiAreaIts(std::vector<AliTrackContainer*> track_containers,
+                           std::vector<fastjet::PseudoJet> &particle_reco_its,
+                           std::map<size_t, size_t> &track_reco_index_its,
+                           std::vector<double> &particle_reco_area_its);
+    void getVoronoiAreaCluster(AliClusterContainer *cluster_container,
+                               std::vector<bool> cell_pass_basic_quality,
+                               std::vector<fastjet::PseudoJet> &particle_reco_cluster,
+                               std::map<size_t, size_t> &cluster_reco_index,
+                               std::vector<double> &particle_reco_area_cluster);
     void getUETpc(std::vector<fastjet::PseudoJet> particle_reco_tpc,
                   std::vector<double> particle_reco_area_tpc,
                   std::pair<std::pair<std::vector<double>, std::vector<double>>, double> &ue_estimate_tpc);
-    void getUEIts();
-    void getUECluster();
+    void getUEIts(std::vector<fastjet::PseudoJet> particle_reco_its,
+                  std::vector<double> particle_reco_area_its,
+                  std::pair<std::pair<std::vector<double>, std::vector<double>>, double> &ue_estimate_its);
+    void getUECluster(std::vector<fastjet::PseudoJet> particle_reco_cluster,
+                      std::vector<double> particle_reco_area_cluster,
+                      std::pair<std::pair<std::vector<double>, std::vector<double>>, double> &ue_estimate_cluster);
     void getIsolationTpc(AliClusterContainer *cluster_container,
                          std::vector<AliTrackContainer*> track_containers,
                          std::map<size_t, size_t> track_reco_index_tpc,
                          std::vector<double> particle_reco_area_tpc,
                          std::pair<std::pair<std::vector<double>, std::vector<double>>, double> ue_estimate_tpc);
-    void getIsolationIts();
-    void getIsolationCluster();
+    void getIsolationIts(AliClusterContainer *cluster_container,
+                         std::vector<AliTrackContainer*> track_containers,
+                         std::map<size_t, size_t> track_reco_index_its,
+                         std::vector<double> particle_reco_area_its,
+                         std::pair<std::pair<std::vector<double>, std::vector<double>>, double> ue_estimate_its);
+    void getIsolationCluster(AliClusterContainer *cluster_container,
+                             std::vector<bool> cell_pass_basic_quality,
+                             std::map<size_t, size_t> cluster_reco_index,
+                             std::vector<double> particle_reco_area_cluster,
+                             std::pair<std::pair<std::vector<double>, std::vector<double>>, double> ue_estimate_cluster);
     void getJetsTpc(std::vector<fastjet::PseudoJet> particle_reco_tpc,
                     std::vector<fastjet::PseudoJet> jet_truth_ak04,
                     std::vector<fastjet::PseudoJet> jet_charged_truth_ak04,
@@ -614,7 +641,16 @@ private:
                     std::vector<bool> cell_pass_basic_quality,
                     AliMCParticleContainer *mc_container,
                     std::vector<Int_t> reverse_stored_parton_algorithmic_index);
-    void getJetsIts();
+    void getJetsIts(std::vector<fastjet::PseudoJet> particle_reco_its,
+                    std::vector<fastjet::PseudoJet> jet_truth_ak04,
+                    std::vector<fastjet::PseudoJet> jet_charged_truth_ak04,
+                    fastjet::ClusterSequenceArea *cluster_sequence_truth,
+                    std::vector<double> particle_reco_area_its,
+                    std::pair<std::pair<std::vector<double>, std::vector<double>>, double> ue_estimate_its,
+                    AliClusterContainer *cluster_container,
+                    std::vector<bool> cell_pass_basic_quality,
+                    AliMCParticleContainer *mc_container,
+                    std::vector<Int_t> reverse_stored_parton_algorithmic_index);
     void skimJets();
     void fillCellBranches(AliVCaloCells *emcal_cell,
                           std::vector<size_t> stored_mc_truth_index);
