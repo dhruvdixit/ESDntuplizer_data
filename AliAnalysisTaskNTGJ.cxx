@@ -378,7 +378,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
     AliVCaloCells *emcal_cell = event->GetEMCALCells();
 
     if (!skimMultiplicityTracklet(event) || // skimMultiplicityTracklet returns true if we should keep the event
-            !skimClusterE(cluster_container)) { // skimClusterE returns true if we should keep event
+            !skimClusterE(cluster_container)) { // skimClusterE returns true if we should keep the event
         return false;
     }
 
@@ -415,7 +415,10 @@ Bool_t AliAnalysisTaskNTGJ::Run()
                        reverse_stored_parton_algorithmic_index,
                        cluster_mc_truth_index,
                        cell_pass_basic_quality);
-    skimJets();
+
+    if (!skimJets()) { // skimJets returns true if we should keep the event
+        return false;
+    }
     fillMuonBranches();
     fillEgNtrial();
 
@@ -2699,9 +2702,64 @@ void AliAnalysisTaskNTGJ::getJetsIts(
                     particle_reco_area_its, ue_estimate_its);
 }
 
-void AliAnalysisTaskNTGJ::skimJets()
+bool AliAnalysisTaskNTGJ::skimJets()
 {
+    // lines 2335-2387
+    if (_skim_jet_min_pt[0] > -INFINITY) {
+        // FIXME: JEC?
+        std::vector<float>
+            pt(_branch_jet_ak04tpc_pt_raw,
+               _branch_jet_ak04tpc_pt_raw + _branch_njet_ak04tpc);
+        if (pt.size() >= 3) {
+            std::partial_sort(pt.begin(), pt.begin() + 3, pt.end(),
+                              std::greater<float>());
+        }
+        else {
+            std::sort(pt.begin(), pt.end(), std::greater<float>());
+        }
+        if (_skim_jet_min_pt.size() >= 3 &&
+            (pt.size() < 3 ||
+             !(pt[0] >= _skim_jet_min_pt[0] &&
+               pt[1] >= _skim_jet_min_pt[1] &&
+               pt[2] >= _skim_jet_min_pt[2]))) {
+            // Discard this event
+            return false;
+        }
+        else if (_skim_jet_min_pt.size() >= 2 &&
+                 (pt.size() < 2 ||
+                  !(pt[0] >= _skim_jet_min_pt[0] &&
+                    pt[1] >= _skim_jet_min_pt[1]))) {
+            // Discard this event
+            return false;
+        }
+        else if (_skim_jet_min_pt.size() >= 1 &&
+                 (pt.size() < 1 ||
+                  !(pt[0] >= _skim_jet_min_pt[0]))) {
+            // Discard this event
+            return false;
+        }
+    }
 
+    if (_skim_jet_average_pt > -INFINITY) {
+        // FIXME: JEC?
+        std::vector<float>
+            pt(_branch_jet_ak04tpc_pt_raw,
+               _branch_jet_ak04tpc_pt_raw + _branch_njet_ak04tpc);
+        if (pt.size() >= 2) {
+            std::partial_sort(pt.begin(), pt.begin() + 2, pt.end(),
+                              std::greater<float>());
+        }
+        else {
+            std::sort(pt.begin(), pt.end(), std::greater<float>());
+        }
+        if (!(pt.size() >= 2 &&
+              0.5 * (pt[0] + pt[1]) >= _skim_jet_average_pt)) {
+            // Discard this event
+            return false;
+        }
+    }
+
+    return true;
 }
 
 void AliAnalysisTaskNTGJ::fillCellBranches(AliVCaloCells *emcal_cell,

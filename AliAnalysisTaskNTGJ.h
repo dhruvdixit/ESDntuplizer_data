@@ -651,7 +651,7 @@ private:
                     std::vector<bool> cell_pass_basic_quality,
                     AliMCParticleContainer *mc_container,
                     std::vector<Int_t> reverse_stored_parton_algorithmic_index);
-    void skimJets();
+    bool skimJets();
     void fillCellBranches(AliVCaloCells *emcal_cell,
                           std::vector<size_t> stored_mc_truth_index);
     void fillMuonBranches();
