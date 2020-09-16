@@ -396,7 +396,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
                          esd_event,
                          reverse_stored_mc_truth_index);
     }
-    
+
     setTrackCuts(); // Dhruv
     doTrackLoop(event, aod_event, track_containers, mc_container, stored_mc_truth_index, primary_vertex);
 
@@ -411,7 +411,9 @@ Bool_t AliAnalysisTaskNTGJ::Run()
                        cluster_container,
                        track_containers,
                        reverse_stored_mc_truth_index,
-                       cluster_mc_truth_index);
+                       reverse_stored_parton_algorithmic_index,
+                       cluster_mc_truth_index,
+                       cell_pass_basic_quality);
     skimJets();
     fillCellBranches(emcal_cell, stored_mc_truth_index);
     fillMuonBranches();
@@ -1274,10 +1276,10 @@ void AliAnalysisTaskNTGJ::doClusterLoop(AliVEvent *event,
         cell_max_cross(cell_id_max, cell_energy_max, cell_cross,
                        c, emcal_cell);
         if (c->GetNCells() > 1 &&
-            cell_cross / cell_energy_max > 0.05 &&
-            !cell_masked(c, _emcal_mask)) {
+                cell_cross / cell_energy_max > 0.05 &&
+                !cell_masked(c, _emcal_mask)) {
             cell_pass_basic_quality[i] = true;
-        }   
+        }
 
         if (i >= ncalo_cluster) {
             break;
@@ -1476,7 +1478,9 @@ void AliAnalysisTaskNTGJ::getUEJetsIsolation(AliESDEvent *esd_event,
         AliClusterContainer *cluster_container,
         std::vector<AliTrackContainer*> track_containers,
         std::vector<Int_t> reverse_stored_mc_truth_index,
-        std::set<Int_t> cluster_mc_truth_index)
+        std::vector<Int_t> reverse_stored_parton_algorithmic_index,
+        std::set<Int_t> cluster_mc_truth_index,
+        std::vector<bool> cell_pass_basic_quality)
 {
     // A value of 2^(-30) < 10^(-9) would map a 10 TeV particle to
     // less than 10 MeV, sufficient to remove any significant momentum
@@ -1486,24 +1490,34 @@ void AliAnalysisTaskNTGJ::getUEJetsIsolation(AliESDEvent *esd_event,
     // py, pz >= 2^(-1022+30) which is of the order 10^(-290) eV).
     static const double scale_ghost = pow(2.0, -30.0);
 
-    std::vector<fastjet::PseudoJet> jet_truth_ak04;         // truth anti-kT jets
-    std::vector<fastjet::PseudoJet> jet_charged_truth_ak04; // truth anti-kT charged jets
+    std::vector<fastjet::PseudoJet> jet_truth_ak04;                 // truth anti-kT jets
+    std::vector<fastjet::PseudoJet> jet_charged_truth_ak04;         // truth anti-kT charged jets
+    fastjet::ClusterSequenceArea *cluster_sequence_truth = NULL;    // truth anti-kT jets
 
     getTruthJetsAndIsolation(esd_event,
                              mc_container,
                              cluster_container,
                              reverse_stored_mc_truth_index,
+                             cluster_mc_truth_index,
                              jet_truth_ak04,
                              jet_charged_truth_ak04,
-                             cluster_mc_truth_index);
+                             cluster_sequence_truth);
 
     getTpcUEJetsIsolation(track_containers,
                           cluster_container,
+                          cell_pass_basic_quality,
                           mc_container,
+                          reverse_stored_parton_algorithmic_index,
                           jet_truth_ak04,
-                          jet_charged_truth_ak04);
+                          jet_charged_truth_ak04,
+                          cluster_sequence_truth);
+
     getItsUEJetsIsolation();
     getClusterUEIsolation();
+
+    if (cluster_sequence_truth != NULL) {
+        delete cluster_sequence_truth;
+    }
 }
 
 void AliAnalysisTaskNTGJ::getTruthJetsAndIsolation(
@@ -1511,9 +1525,10 @@ void AliAnalysisTaskNTGJ::getTruthJetsAndIsolation(
     AliMCParticleContainer *mc_container,
     AliClusterContainer *cluster_container,
     std::vector<Int_t> reverse_stored_mc_truth_index,
+    std::set<Int_t> cluster_mc_truth_index,
     std::vector<fastjet::PseudoJet> &jet_truth_ak04,
     std::vector<fastjet::PseudoJet> &jet_charged_truth_ak04,
-    std::set<Int_t> cluster_mc_truth_index)
+    fastjet::ClusterSequenceArea *&cluster_sequence_truth)
 {
     // lines 1283-1292
     enum {
@@ -1527,22 +1542,27 @@ void AliAnalysisTaskNTGJ::getTruthJetsAndIsolation(
           esd_event->GetBeamParticle(1) == BEAM_PARTICLE_P) :
         false;
 
-    getTruthJets(mc_container, subtract_ue, reverse_stored_mc_truth_index, jet_truth_ak04, jet_charged_truth_ak04);
+    getTruthJets(subtract_ue,
+                 mc_container,
+                 reverse_stored_mc_truth_index,
+                 jet_truth_ak04,
+                 jet_charged_truth_ak04,
+                 cluster_sequence_truth);
     getTruthIsolation(cluster_container, mc_container, subtract_ue, cluster_mc_truth_index);
 }
 
 void AliAnalysisTaskNTGJ::getTruthJets(
-    AliMCParticleContainer *mc_container,
     bool subtract_ue,
+    AliMCParticleContainer *mc_container,
     std::vector<Int_t> reverse_stored_mc_truth_index,
     std::vector<fastjet::PseudoJet> &jet_truth_ak04,
-    std::vector<fastjet::PseudoJet> &jet_charged_truth_ak04)
+    std::vector<fastjet::PseudoJet> &jet_charged_truth_ak04,
+    fastjet::ClusterSequenceArea *&cluster_sequence_truth)
 {
     // lines 1294-1320, 1365-1411, 1476-1490, 1521, 1527-1528, 1540-1545
     static const double jet_antikt_d_04 = 0.4;
 
     std::vector<fastjet::PseudoJet> particle_truth;
-    fastjet::ClusterSequenceArea *cluster_sequence_truth = NULL;
     std::vector<fastjet::PseudoJet> particle_charged_truth;
     fastjet::ClusterSequenceArea *cluster_sequence_charged_truth = NULL;
 
@@ -1642,9 +1662,6 @@ void AliAnalysisTaskNTGJ::getTruthJets(
     FILL_BRANCH_JET_TRUTH(charged_truth, ak04,
                           jet_charged_truth_ak04);
 
-    if (cluster_sequence_truth != NULL) {
-        delete cluster_sequence_truth;
-    }
     if (cluster_sequence_charged_truth != NULL) {
         delete cluster_sequence_charged_truth;
     }
@@ -1768,27 +1785,23 @@ void AliAnalysisTaskNTGJ::getTruthIsolation(AliClusterContainer *cluster_contain
 void AliAnalysisTaskNTGJ::getTpcUEJetsIsolation(
     std::vector<AliTrackContainer*> track_containers,
     AliClusterContainer *cluster_container,
+    std::vector<bool> cell_pass_basic_quality,
     AliMCParticleContainer *mc_container,
+    std::vector<Int_t> reverse_stored_parton_algorithmic_index,
     std::vector<fastjet::PseudoJet> jet_truth_ak04,
-    std::vector<fastjet::PseudoJet> jet_charged_truth_ak04)
+    std::vector<fastjet::PseudoJet> jet_charged_truth_ak04,
+    fastjet::ClusterSequenceArea *cluster_sequence_truth)
 {
     std::vector<fastjet::PseudoJet> particle_reco_tpc;  // track pseudojets
     std::map<size_t, size_t> track_reco_index_tpc;      // index for isolation calculation
     std::vector<double> particle_reco_area_tpc;         // track areas
     std::pair<std::pair<std::vector<double>, std::vector<double> >,
-              double> ue_estimate_tpc;                  // object containing UE information
+        double> ue_estimate_tpc;                        // object containing UE information
 
     getVoronoiAreaTpc(track_containers,
                       particle_reco_tpc,
                       track_reco_index_tpc,
                       particle_reco_area_tpc);
-
-    // unclear if this has to be here, but it happens before the set_user_index,
-    // so to maintain that, we'll do it this way
-    std::vector<fastjet::PseudoJet> particle_reco_tagged_ak04tpc = particle_reco_tpc;
-    for (size_t i = 0; i < particle_reco_tpc.size(); i++) {
-        particle_reco_tpc[i].set_user_index(static_cast<int>(i));
-    }    
 
     getUETpc(particle_reco_tpc,
              particle_reco_area_tpc,
@@ -1799,7 +1812,17 @@ void AliAnalysisTaskNTGJ::getTpcUEJetsIsolation(
                     track_reco_index_tpc,
                     particle_reco_area_tpc,
                     ue_estimate_tpc);
-    getJetsTpc();
+
+    getJetsTpc(particle_reco_tpc,
+               jet_truth_ak04,
+               jet_charged_truth_ak04,
+               cluster_sequence_truth,
+               particle_reco_area_tpc,
+               ue_estimate_tpc,
+               cluster_container,
+               cell_pass_basic_quality,
+               mc_container,
+               reverse_stored_parton_algorithmic_index);
 }
 
 void AliAnalysisTaskNTGJ::getItsUEJetsIsolation()
@@ -1811,12 +1834,25 @@ void AliAnalysisTaskNTGJ::getItsUEJetsIsolation()
     // reconstruct and fill jets
 }
 
-void AliAnalysisTaskNTGJ::getClusterUEIsolation()
+void AliAnalysisTaskNTGJ::getClusterUEIsolation(
+    AliClusterContainer *cluster_container,
+    std::vector<bool> cell_pass_basic_quality)
 {
     // initialize vectors
-    // calculate area
-    // calculate UE
-    // calculate isolation
+    std::vector<fastjet::PseudoJet> particle_reco_cluster;  // cluster pseudojets
+    std::map<size_t, size_t> cluster_reco_index;            // index for isolation calculation
+    std::vector<double> particle_reco_area_cluster;         // cluster areas
+    std::pair<std::pair<std::vector<double>, std::vector<double> >,
+        double> ue_estimate_cluster;                        // object containing UE information
+
+    getVoronoiAreaCluster(cluster_container,
+                          cell_pass_basic_quality,
+                          particle_reco_cluster,
+                          cluster_reco_index,
+                          particle_reco_area_cluster);
+
+    getUECluster();
+    getIsolationCluster();
 }
 
 void AliAnalysisTaskNTGJ::getVoronoiAreaTpc(
@@ -1829,7 +1865,7 @@ void AliAnalysisTaskNTGJ::getVoronoiAreaTpc(
     std::vector<size_t> reco_stored_track_index_tpc;            // index for filling voronoi area branch
     std::vector<point_2d_t> particle_reco_area_estimation_tpc;  // used for area calculation
     std::vector<std::set<size_t> > particle_reco_incident_tpc;  // unused variable as part of area calculation
-    
+
     // fill pseudojet and index vectors
     Int_t itrack = 0;
     for (auto track_container : track_containers) {
@@ -1844,7 +1880,7 @@ void AliAnalysisTaskNTGJ::getVoronoiAreaTpc(
                 track_reco_index_tpc[itrack] = particle_reco_tpc.size();
                 reco_stored_track_index_tpc.push_back(itrack);
                 particle_reco_tpc.push_back(fastjet::PseudoJet(
-                    t->Px(), t->Py(), t->Pz(), t->P()));
+                                                t->Px(), t->Py(), t->Pz(), t->P()));
             }
 
             itrack++;
@@ -1853,8 +1889,8 @@ void AliAnalysisTaskNTGJ::getVoronoiAreaTpc(
 
     // calculate and fill voronoi area branch
     for (std::vector<fastjet::PseudoJet>::const_iterator iterator =
-             particle_reco_tpc.begin();
-         iterator != particle_reco_tpc.end(); iterator++) {
+                particle_reco_tpc.begin();
+            iterator != particle_reco_tpc.end(); iterator++) {
         particle_reco_area_estimation_tpc.push_back(
             point_2d_t(iterator->pseudorapidity(),
                        iterator->phi_std()));
@@ -1866,11 +1902,12 @@ void AliAnalysisTaskNTGJ::getVoronoiAreaTpc(
 
     for (size_t i = 0; i < particle_reco_area_tpc.size(); i++) {
         if (i < reco_stored_track_index_tpc.size() &&
-            reco_stored_track_index_tpc[i] < _branch_ntrack) {
+                reco_stored_track_index_tpc[i] < _branch_ntrack) {
             _branch_track_voronoi_area
-                [reco_stored_track_index_tpc[i]] =
+            [reco_stored_track_index_tpc[i]] =
                 half(particle_reco_area_tpc[i]);
         }
+        particle_reco_tpc[i].set_user_index(static_cast<int>(i));
     }
 }
 
@@ -1894,31 +1931,31 @@ void AliAnalysisTaskNTGJ::getUETpc(
     // kT clustering
     static const double jet_kt_d_ue_estimation = 0.3;
     const fastjet::ClusterSequenceArea
-        cluster_sequence_ue_estimation_tpc(
-            particle_reco_tpc,
-            fastjet::JetDefinition(fastjet::JetDefinition(
-                fastjet::kt_algorithm, jet_kt_d_ue_estimation)),
-            fastjet::VoronoiAreaSpec());
+    cluster_sequence_ue_estimation_tpc(
+        particle_reco_tpc,
+        fastjet::JetDefinition(fastjet::JetDefinition(
+                                   fastjet::kt_algorithm, jet_kt_d_ue_estimation)),
+        fastjet::VoronoiAreaSpec());
     const std::vector<fastjet::PseudoJet> jet_ue_estimation_tpc =
         cluster_sequence_ue_estimation_tpc.inclusive_jets(0);
 
     // fill "debug" branches
     _branch_debug_njet_ue_estimation = 0;
     for (std::vector<fastjet::PseudoJet>::const_iterator
-             iterator_jet = jet_ue_estimation_tpc.begin();
-         iterator_jet != jet_ue_estimation_tpc.end();
-         iterator_jet++) {
+            iterator_jet = jet_ue_estimation_tpc.begin();
+            iterator_jet != jet_ue_estimation_tpc.end();
+            iterator_jet++) {
         _branch_debug_jet_ue_estimation_pt_raw
-            [_branch_debug_njet_ue_estimation] =
+        [_branch_debug_njet_ue_estimation] =
             iterator_jet->perp();
         _branch_debug_jet_ue_estimation_eta_raw
-            [_branch_debug_njet_ue_estimation] =
+        [_branch_debug_njet_ue_estimation] =
             iterator_jet->pseudorapidity();
         _branch_debug_jet_ue_estimation_phi_raw
-            [_branch_debug_njet_ue_estimation] =
+        [_branch_debug_njet_ue_estimation] =
             iterator_jet->phi_std();
         _branch_debug_jet_ue_estimation_area_raw
-            [_branch_debug_njet_ue_estimation] =
+        [_branch_debug_njet_ue_estimation] =
             iterator_jet->area();
         _branch_debug_njet_ue_estimation++;
     }
@@ -2082,17 +2119,87 @@ void AliAnalysisTaskNTGJ::getIsolationTpc(
 
 void AliAnalysisTaskNTGJ::getIsolationIts()
 {
-    
+
 }
 
 void AliAnalysisTaskNTGJ::getIsolationCluster()
 {
-    
+
 }
 
-void AliAnalysisTaskNTGJ::getJetsTpc()
+void AliAnalysisTaskNTGJ::getJetsTpc(
+    std::vector<fastjet::PseudoJet> particle_reco_tpc,
+    std::vector<fastjet::PseudoJet> jet_truth_ak04,
+    std::vector<fastjet::PseudoJet> jet_charged_truth_ak04,
+    fastjet::ClusterSequenceArea *cluster_sequence_truth,
+    std::vector<double> particle_reco_area_tpc,
+    std::pair<std::pair<std::vector<double>, std::vector<double>>, double> ue_estimate_tpc,
+    AliClusterContainer *cluster_container,
+    std::vector<bool> cell_pass_basic_quality,
+    AliMCParticleContainer *mc_container,
+    std::vector<Int_t> reverse_stored_parton_algorithmic_index)
 {
+    // lines 1551-1556, 1522-1523, 1527-1528, 1535-1536, 1551-1567, 2322-2327
 
+    std::vector<fastjet::PseudoJet> particle_reco_tagged_ak04tpc = particle_reco_tpc;
+    static const double jet_antikt_d_04 = 0.4;
+    static const double scale_ghost = pow(2.0, -30.0);
+
+    // add ghost particles to reco tagged vector
+    UInt_t icluster = 0;
+    for (auto c : cluster_container->accepted()) {
+        if (cell_pass_basic_quality[icluster]) {
+            TLorentzVector p;
+            c->GetMomentum(p, _branch_primary_vertex);
+
+            const fastjet::PseudoJet
+            pj(p.Px(), p.Py(), p.Pz(), p.P());
+
+            particle_reco_tagged_ak04tpc.push_back(pj * scale_ghost);
+            particle_reco_tagged_ak04tpc.back().
+            set_user_index(USER_INDEX_EM);
+        }
+        icluster++;
+    }
+
+    if (cluster_sequence_truth == NULL) {
+        std::cout << "cluster_sequence_truth is null" << std::endl;
+    }
+
+    TAG_PARTICLE_RECO_JET_TRUTH(particle_reco_tagged_ak04tpc,
+                                jet_truth_ak04, 0);
+    TAG_PARTICLE_RECO_JET_TRUTH(particle_reco_tagged_ak04tpc,
+                                jet_charged_truth_ak04, 1);
+    // Insert partons as ghosts into the reco particles
+    TAG_PARTICLE_RECO_PARTON(particle_reco_tagged_ak04tpc,
+                             algorithmic, ALGORITHMIC);
+
+    // anti-kT clustering
+    const fastjet::ClusterSequenceArea
+    cluster_sequence_reco_ak04tpc(
+        particle_reco_tpc,
+        fastjet::JetDefinition(fastjet::JetDefinition(
+                                   fastjet::antikt_algorithm, jet_antikt_d_04)),
+        fastjet::VoronoiAreaSpec());
+    const std::vector<fastjet::PseudoJet> jet_reco_ak04tpc =
+        cluster_sequence_reco_ak04tpc.inclusive_jets(0);
+
+    const fastjet::ClusterSequenceArea
+    cluster_sequence_reco_tagged_ak04tpc(
+        particle_reco_tagged_ak04tpc,
+        fastjet::JetDefinition(fastjet::JetDefinition(
+                                   fastjet::antikt_algorithm, jet_antikt_d_04)),
+        fastjet::VoronoiAreaSpec());
+    const std::vector<fastjet::PseudoJet> jet_reco_tagged_ak04tpc =
+        cluster_sequence_reco_tagged_ak04tpc.inclusive_jets(0);
+
+    // fill many branches
+    FILL_BRANCH_JET(ak04tpc, jet_reco_ak04tpc,
+                    cluster_sequence_reco_ak04tpc,
+                    jet_reco_tagged_ak04tpc,
+                    cluster_sequence_reco_tagged_ak04tpc,
+                    ak04, jet_truth_ak04, jet_charged_truth_ak04,
+                    particle_reco_area_tpc, ue_estimate_tpc);
 }
 
 void AliAnalysisTaskNTGJ::getJetsIts()
