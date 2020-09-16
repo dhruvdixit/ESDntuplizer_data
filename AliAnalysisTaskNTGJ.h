@@ -497,7 +497,7 @@ private:
                   AliESDEvent *&esd_event,
                   AliAODEvent *&aod_event);
     void getContainers(AliClusterContainer *&cluster_container,
-                       std::vector<AliTrackContainer*> *&track_containers,
+                       std::vector<AliTrackContainer*> &track_containers,
                        AliMCParticleContainer *&mc_container);
     void setTrackCuts();
     void getMultiplicityCentralityEventPlane(AliVEvent *event);
@@ -525,7 +525,7 @@ private:
                                std::vector<Int_t> &reverse_stored_parton_algorithmic_index);
     void doTrackLoop(AliVEvent *event,
                      AliAODEvent *aod_event,
-                     std::vector<AliTrackContainer*> *track_containers,
+                     std::vector<AliTrackContainer*> track_containers,
                      AliMCParticleContainer *mc_container,
                      std::vector<size_t> stored_mc_truth_index,
                      const AliVVertex *primary_vertex);
@@ -535,18 +535,14 @@ private:
     void doClusterLoop(AliVEvent *event,
                        AliVCaloCells *emcal_cell,
                        AliClusterContainer *cluster_container,
-                       std::vector<AliTrackContainer*> *track_containers,
-                       AliMCParticleContainer *mc_container,
                        std::vector<size_t> stored_mc_truth_index,
-                       std::set<Int_t> &cluster_mc_truth_index);
+                       std::set<Int_t> &cluster_mc_truth_index,
+                       std::vector<bool> &cell_pass_basic_quality);
     void fillClusterBranches(AliVCaloCells *emcal_cell,
                              AliVCluster *c,
                              Int_t i, // i is cluster index in loop
                              std::vector<size_t> stored_mc_truth_index,
                              std::set<Int_t> &cluster_mc_truth_index);
-    void fillIsolationBranches(AliClusterContainer *cluster_container,
-                               std::vector<AliTrackContainer*> *track_containers,
-                               AliMCParticleContainer *mc_container);
     void fillPhotonNNBranches(AliVCluster *c,
                               std::vector<size_t> stored_mc_truth_index,
                               AliVCaloCells *emcal_cell,
@@ -554,6 +550,7 @@ private:
     void getUEJetsIsolation(AliESDEvent *esd_event,
                             AliMCParticleContainer *mc_container,
                             AliClusterContainer *cluster_container,
+                            std::vector<AliTrackContainer*> track_containers,
                             std::vector<Int_t> reverse_stored_mc_truth_index,
                             std::set<Int_t> cluster_mc_truth_index);
     void getTruthJetsAndIsolation(AliESDEvent *esd_event,
@@ -563,9 +560,6 @@ private:
                                   std::vector<fastjet::PseudoJet> &jet_truth_ak04,
                                   std::vector<fastjet::PseudoJet> &jet_charged_truth_ak04,
                                   std::set<Int_t> cluster_mc_truth_index);
-    void getTpcUEJetsIsolation();
-    void getItsUEJetsIsolation();
-    void getClusterUEIsolation();
     void getTruthJets(AliMCParticleContainer *mc_container,
                       bool subtract_ue,
                       std::vector<Int_t> reverse_stored_mc_truth_index,
@@ -575,6 +569,33 @@ private:
                            AliMCParticleContainer *mc_container,
                            bool subtract_ue,
                            std::set<Int_t> cluster_mc_truth_index);
+    void getTpcUEJetsIsolation(std::vector<AliTrackContainer*> track_containers,
+                               AliClusterContainer *cluster_container,
+                               AliMCParticleContainer *mc_container,
+                               std::vector<fastjet::PseudoJet> jet_truth_ak04,
+                               std::vector<fastjet::PseudoJet> jet_charged_truth_ak04);
+    void getItsUEJetsIsolation();
+    void getClusterUEIsolation();
+    void getVoronoiAreaTpc(std::vector<AliTrackContainer*> track_containers,
+                           std::vector<fastjet::PseudoJet> &particle_reco_tpc,
+                           std::map<size_t, size_t> &track_reco_index_tpc,
+                           std::vector<double> &particle_reco_area_tpc);
+    void getVoronoiAreaIts();
+    void getVoronoiAreaCluster();
+    void getUETpc(std::vector<fastjet::PseudoJet> particle_reco_tpc,
+                  std::vector<double> particle_reco_area_tpc,
+                  std::pair<std::pair<std::vector<double>, std::vector<double>>, double> &ue_estimate_tpc);
+    void getUEIts();
+    void getUECluster();
+    void getIsolationTpc(AliClusterContainer *cluster_container,
+                         std::vector<AliTrackContainer*> track_containers,
+                         std::map<size_t, size_t> track_reco_index_tpc,
+                         std::vector<double> particle_reco_area_tpc,
+                         std::pair<std::pair<std::vector<double>, std::vector<double>>, double> ue_estimate_tpc);
+    void getIsolationIts();
+    void getIsolationCluster();
+    void getJetsTpc();
+    void getJetsIts();
     void skimJets();
     void fillCellBranches(AliVCaloCells *emcal_cell,
                           std::vector<size_t> stored_mc_truth_index);
