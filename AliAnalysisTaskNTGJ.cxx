@@ -2269,7 +2269,7 @@ void AliAnalysisTaskNTGJ::getIsolationTpc(
                 }
             }
 
-            itrack++
+            itrack++;
         }
 
         _branch_cluster_iso_tpc_01[icluster] =
@@ -2408,7 +2408,7 @@ void AliAnalysisTaskNTGJ::getIsolationIts(
                 }
             }
 
-            itrack++
+            itrack++;
         }
 
         _branch_cluster_iso_its_01[icluster] =
