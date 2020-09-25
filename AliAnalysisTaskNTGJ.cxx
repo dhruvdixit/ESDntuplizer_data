@@ -1960,6 +1960,9 @@ void AliAnalysisTaskNTGJ::getVoronoiAreaTpc(
             [reco_stored_track_index_tpc[i]] =
                 half(particle_reco_area_tpc[i]);
         }
+    }
+
+    for (size_t i = 0; i < particle_reco_tpc.size(); i++) {
         particle_reco_tpc[i].set_user_index(static_cast<int>(i));
     }
 }
@@ -2017,6 +2020,9 @@ void AliAnalysisTaskNTGJ::getVoronoiAreaIts(
             [reco_stored_track_index_its[i]] =
                 half(particle_reco_area_its[i]);
         }
+    }
+
+    for (size_t i = 0; i < particle_reco_its.size(); i++) {
         particle_reco_its[i].set_user_index(static_cast<int>(i));
     }
 }
@@ -2262,8 +2268,8 @@ void AliAnalysisTaskNTGJ::getIsolationTpc(
                     }
                 }
             }
-            // uncomment AFTER initial checks/comparisons
-            // itrack++
+
+            itrack++
         }
 
         _branch_cluster_iso_tpc_01[icluster] =
@@ -2401,8 +2407,8 @@ void AliAnalysisTaskNTGJ::getIsolationIts(
                     }
                 }
             }
-            // uncomment AFTER initial checks/comparisons
-            // itrack++
+
+            itrack++
         }
 
         _branch_cluster_iso_its_01[icluster] =
