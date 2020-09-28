@@ -2267,9 +2267,9 @@ void AliAnalysisTaskNTGJ::getIsolationTpc(
                                 sqrt(dr_2), track_pt_minus_ue + ue));
                     }
                 }
-            }
 
-            itrack++;
+                itrack++;
+            }
         }
 
         _branch_cluster_iso_tpc_01[icluster] =
@@ -2406,9 +2406,9 @@ void AliAnalysisTaskNTGJ::getIsolationIts(
                                 sqrt(dr_2), track_pt_minus_ue + ue));
                     }
                 }
-            }
 
-            itrack++;
+                itrack++;
+            }
         }
 
         _branch_cluster_iso_its_01[icluster] =
