@@ -917,6 +917,8 @@ namespace {
                        std::vector<double> > ue_estimate,
                        double pseudorapidity, double azimuth)
     {
+        return evaluate_ue_constant(ue_estimate);
+
         if (ue_estimate.first.empty() ||
             ue_estimate.second.empty()) {
             return 0;
