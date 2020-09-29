@@ -360,6 +360,8 @@ Bool_t AliAnalysisTaskNTGJ::Run()
     std::vector<AliTrackContainer*> track_containers;
     AliMCParticleContainer *mc_container = NULL;
 
+    // for some reason, moving loadEmcalGeometry later causes a change in cell_position
+    loadEmcalGeometry();
     // event-level initialization and branches
     if (!getEvent(event, esd_event, aod_event)) { // getEvent returns false if the event is null
         return false;
@@ -374,7 +376,6 @@ Bool_t AliAnalysisTaskNTGJ::Run()
     getBeamProperties(event, esd_event, aod_event, primary_vertex);
     getMetadata(esd_event, aod_event);
 
-    loadEmcalGeometry();
     AliVCaloCells *emcal_cell = event->GetEMCALCells();
 
     if (!skimMultiplicityTracklet(event) || // skimMultiplicityTracklet returns true if we should keep the event
