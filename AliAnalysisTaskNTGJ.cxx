@@ -401,10 +401,9 @@ Bool_t AliAnalysisTaskNTGJ::Run()
     setTrackCuts(); // Dhruv
     doTrackLoop(event, aod_event, track_containers, mc_container, stored_mc_truth_index, primary_vertex);
 
-    std::set<Int_t> cluster_mc_truth_index;
     std::vector<bool> cell_pass_basic_quality;
     loadPhotonNNModel();
-    doClusterLoop(event, emcal_cell, cluster_container, stored_mc_truth_index, cluster_mc_truth_index, cell_pass_basic_quality);
+    doClusterLoop(event, emcal_cell, cluster_container, stored_mc_truth_index, cell_pass_basic_quality);
     fillCellBranches(emcal_cell, stored_mc_truth_index);
 
     // voronoi area, UE, jets, isolation
@@ -412,9 +411,9 @@ Bool_t AliAnalysisTaskNTGJ::Run()
                        mc_container,
                        cluster_container,
                        track_containers,
+                       stored_mc_truth_index,
                        reverse_stored_mc_truth_index,
                        reverse_stored_parton_algorithmic_index,
-                       cluster_mc_truth_index,
                        cell_pass_basic_quality);
 
     if (!skimJets()) { // skimJets returns true if we should keep the event
@@ -1252,7 +1251,6 @@ void AliAnalysisTaskNTGJ::doClusterLoop(AliVEvent *event,
                                         AliVCaloCells *emcal_cell,
                                         AliClusterContainer *cluster_container,
                                         std::vector<size_t> stored_mc_truth_index,
-                                        std::set<Int_t> &cluster_mc_truth_index,
                                         std::vector<bool> &cell_pass_basic_quality)
 {
     AliVVZERO *v0 = event->GetVZEROData();
@@ -1303,7 +1301,7 @@ void AliAnalysisTaskNTGJ::doClusterLoop(AliVEvent *event,
         // ----------------
         // lines 1701-1830
         // set arrays with USHRT_Max. Fill with data in loop
-        fillClusterBranches(emcal_cell, c, i, stored_mc_truth_index, cluster_mc_truth_index);
+        fillClusterBranches(emcal_cell, c, i, stored_mc_truth_index);
 
         //-------------------
         // Neural Net Branches
@@ -1322,8 +1320,7 @@ void AliAnalysisTaskNTGJ::doClusterLoop(AliVEvent *event,
 void AliAnalysisTaskNTGJ::fillClusterBranches(AliVCaloCells *emcal_cell,
         AliVCluster *c,
         Int_t i,
-        std::vector<size_t> stored_mc_truth_index,
-        std::set<Int_t> &cluster_mc_truth_index)
+        std::vector<size_t> stored_mc_truth_index)
 {
     // lines 1701-1830
     //FIXME: change away from single letter variables...
@@ -1409,6 +1406,7 @@ void AliAnalysisTaskNTGJ::fillClusterBranches(AliVCaloCells *emcal_cell,
         c->GetNLabels();
 
     std::vector<std::pair<float, unsigned short> > mc_truth_energy_index;
+    std::set<Int_t> cluster_mc_truth_index;
 
     for (UInt_t j = 0; j < c->GetNLabels(); j++) {
         const Int_t mc_truth_index = c->GetLabelAt(j);
@@ -1488,9 +1486,9 @@ void AliAnalysisTaskNTGJ::getUEJetsIsolation(AliESDEvent *esd_event,
         AliMCParticleContainer *mc_container,
         AliClusterContainer *cluster_container,
         std::vector<AliTrackContainer*> track_containers,
+        std::vector<size_t> stored_mc_truth_index,
         std::vector<Int_t> reverse_stored_mc_truth_index,
         std::vector<Int_t> reverse_stored_parton_algorithmic_index,
-        std::set<Int_t> cluster_mc_truth_index,
         std::vector<bool> cell_pass_basic_quality)
 {
     // A value of 2^(-30) < 10^(-9) would map a 10 TeV particle to
@@ -1508,8 +1506,8 @@ void AliAnalysisTaskNTGJ::getUEJetsIsolation(AliESDEvent *esd_event,
     getTruthJetsAndIsolation(esd_event,
                              mc_container,
                              cluster_container,
+                             stored_mc_truth_index,
                              reverse_stored_mc_truth_index,
-                             cluster_mc_truth_index,
                              jet_truth_ak04,
                              jet_charged_truth_ak04,
                              cluster_sequence_truth);
@@ -1544,8 +1542,8 @@ void AliAnalysisTaskNTGJ::getTruthJetsAndIsolation(
     AliESDEvent *esd_event,
     AliMCParticleContainer *mc_container,
     AliClusterContainer *cluster_container,
+    std::vector<size_t> stored_mc_truth_index,
     std::vector<Int_t> reverse_stored_mc_truth_index,
-    std::set<Int_t> cluster_mc_truth_index,
     std::vector<fastjet::PseudoJet> &jet_truth_ak04,
     std::vector<fastjet::PseudoJet> &jet_charged_truth_ak04,
     fastjet::ClusterSequenceArea *&cluster_sequence_truth)
@@ -1568,7 +1566,7 @@ void AliAnalysisTaskNTGJ::getTruthJetsAndIsolation(
                  jet_truth_ak04,
                  jet_charged_truth_ak04,
                  cluster_sequence_truth);
-    getTruthIsolation(cluster_container, mc_container, subtract_ue, cluster_mc_truth_index);
+    getTruthIsolation(cluster_container, mc_container, subtract_ue, stored_mc_truth_index);
 }
 
 void AliAnalysisTaskNTGJ::getTruthJets(
@@ -1690,13 +1688,25 @@ void AliAnalysisTaskNTGJ::getTruthJets(
 void AliAnalysisTaskNTGJ::getTruthIsolation(AliClusterContainer *cluster_container,
         AliMCParticleContainer *mc_container,
         bool subtract_ue,
-        std::set<Int_t> cluster_mc_truth_index)
+        std::vector<size_t> stored_mc_truth_index)
 {
     UInt_t icluster = 0;
     for (auto cluster : cluster_container->accepted()) {
         AliVCluster *c = cluster;
         TLorentzVector p;
         c->GetMomentum(p, _branch_primary_vertex);
+
+        // remake cluster_mc_truth_index set here
+        // rather than pass around a vector of sets
+        // see fillClusterBranches for more notes
+        std::set<Int_t> cluster_mc_truth_index;
+
+        for (UInt_t j = 0; j < c->GetNLabels(); j++) {
+            const Int_t mc_truth_index = c->GetLabelAt(j);
+
+            cluster_mc_truth_index.insert(
+                stored_mc_truth_index[mc_truth_index]);
+        }
 
         if (mc_container) {
             double cluster_iso_01_truth = 0;
