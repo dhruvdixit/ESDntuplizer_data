@@ -632,6 +632,7 @@ private:
                              std::vector<double> particle_reco_area_cluster,
                              std::pair<std::pair<std::vector<double>, std::vector<double>>, double> ue_estimate_cluster);
     void getJetsTpc(std::vector<fastjet::PseudoJet> particle_reco_tpc,
+                    std::vector<fastjet::PseudoJet> particle_reco_tagged_ak04_tpc,
                     std::vector<fastjet::PseudoJet> jet_truth_ak04,
                     std::vector<fastjet::PseudoJet> jet_charged_truth_ak04,
                     fastjet::ClusterSequenceArea *cluster_sequence_truth,
@@ -642,6 +643,7 @@ private:
                     AliMCParticleContainer *mc_container,
                     std::vector<Int_t> reverse_stored_parton_algorithmic_index);
     void getJetsIts(std::vector<fastjet::PseudoJet> particle_reco_its,
+                    std::vector<fastjet::PseudoJet> particle_reco_tagged_ak04_its,
                     std::vector<fastjet::PseudoJet> jet_truth_ak04,
                     std::vector<fastjet::PseudoJet> jet_charged_truth_ak04,
                     fastjet::ClusterSequenceArea *cluster_sequence_truth,
