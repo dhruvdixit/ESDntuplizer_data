@@ -1021,7 +1021,14 @@ void AliAnalysisTaskNTGJ::doTrackLoop(AliVEvent *event,
                                       std::vector<size_t> stored_mc_truth_index,
                                       const AliVVertex *primary_vertex)
 {
-    // lines 1016-1136, 1150-1160
+    // lines 1004-1009, 1016-1136, 1150-1160
+    std::fill(_branch_met_tpc,
+              _branch_met_tpc + sizeof(_branch_met_tpc) /
+              sizeof(*_branch_met_tpc), 0);
+    std::fill(_branch_met_its,
+              _branch_met_its + sizeof(_branch_met_its) /
+              sizeof(*_branch_met_its), 0);
+
     double met_tpc_kahan_error[2] = { 0, 0 };
     double met_its_kahan_error[2] = { 0, 0 };
 
