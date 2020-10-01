@@ -478,6 +478,8 @@ void runNTGJ(const char *config_filename = "config/18q.yaml",
 
     if (mgr->InitAnalysis()) {
         if (strcmp(run_mode, "local") != 0) {
+            // uncomment this line to keep stderr and stdout
+            // plugin->SetKeepLogs(kTRUE);
             plugin->SetNtestFiles(1);
             plugin->SetRunMode(run_mode);
             mgr->SetGridHandler(plugin);

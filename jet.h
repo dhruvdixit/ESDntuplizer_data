@@ -924,36 +924,37 @@ namespace {
 
         double p = ue_estimate.first[0];
 
-        if (ue_estimate.first.size() >= 1) {
-            p += ue_estimate.first[1] * pseudorapidity;
-        }
+        // if (ue_estimate.first.size() >= 1) {
+        //     p += ue_estimate.first[1] * pseudorapidity;
+        // }
 
-        const double x = pseudorapidity;
-        // t[0] is T_n(x), t[1] is T_{n - 1}(x)
-        double t[2] = { x, 1 };
+        // const double x = pseudorapidity;
+        // // t[0] is T_n(x), t[1] is T_{n - 1}(x)
+        // double t[2] = { x, 1 };
 
-        for (size_t i = 2; i < ue_estimate.first.size(); i++) {
-            const double tn1 = 2 * x * t[0] - t[1];
+        // for (size_t i = 2; i < ue_estimate.first.size(); i++) {
+        //     const double tn1 = 2 * x * t[0] - t[1];
 
-            p += ue_estimate.first[i] * tn1;
-            t[0] = tn1;
-            t[1] = t[0];
-        }
+        //     p += ue_estimate.first[i] * tn1;
+        //     t[0] = tn1;
+        //     t[1] = t[0];
+        // }
 
-        double a = ue_estimate.second[0];
+        // double a = ue_estimate.second[0];
 
-        for (size_t i = 0; i < (ue_estimate.second.size() - 1) / 2; i++) {
-            const double v =
-                sqrt(std::pow(ue_estimate.second[2 * i + 2], 2) +
-                     std::pow(ue_estimate.second[2 * i + 1], 2));
-            const double psi = atan2(ue_estimate.second[2 * i + 2],
-                                     ue_estimate.second[2 * i + 1]);
-            const double k = i + 1;
+        // for (size_t i = 0; i < (ue_estimate.second.size() - 1) / 2; i++) {
+        //     const double v =
+        //         sqrt(std::pow(ue_estimate.second[2 * i + 2], 2) +
+        //              std::pow(ue_estimate.second[2 * i + 1], 2));
+        //     const double psi = atan2(ue_estimate.second[2 * i + 2],
+        //                              ue_estimate.second[2 * i + 1]);
+        //     const double k = i + 1;
 
-            a += v * cos(k * azimuth - psi);
-        }
+        //     a += v * cos(k * azimuth - psi);
+        // }
 
-        return std::max(0.0, p * a / ue_estimate.second[0]);
+        // return std::max(0.0, p * (a / ue_estimate.second[0]));
+        return std::max(0.0, p);
     }
 
     double evaluate_ue_constant(std::pair<std::vector<double>,

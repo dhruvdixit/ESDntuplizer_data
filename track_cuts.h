@@ -76,4 +76,13 @@ namespace {
 		return _local_track_cut_bits;
 	}
 
+	bool trackPassesTPCCuts(AliAODTrack *t) {
+		bool passCut = true;
+		passCut = passCut && trackPassesCut0(t);
+		passCut = passCut && trackPassesCut1(t);
+		passCut = passCut && trackPassesCut2(t);
+		passCut = passCut && trackPassesCut3(t);
+
+		return passCut;
+	}
 }
