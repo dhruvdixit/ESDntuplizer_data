@@ -362,6 +362,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
 
     // for some reason, moving loadEmcalGeometry later causes a change in cell_position
     loadEmcalGeometry();
+
     // event-level initialization and branches
     if (!getEvent(event, esd_event, aod_event)) { // getEvent returns false if the event is null
         return false;
@@ -383,7 +384,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
         return false;
     }
 
-    // MC particles, tracks, clusters
+    // MC particles
     std::vector<size_t> stored_mc_truth_index;
     std::vector<Int_t> reverse_stored_mc_truth_index;
     std::vector<Int_t> reverse_stored_parton_algorithmic_index;
@@ -398,9 +399,11 @@ Bool_t AliAnalysisTaskNTGJ::Run()
                          reverse_stored_mc_truth_index);
     }
 
-    setTrackCuts(); // Dhruv
+    // tracks
+    setTrackCuts(); // currently empty
     doTrackLoop(event, aod_event, track_containers, mc_container, stored_mc_truth_index, primary_vertex);
 
+    // clusters and cells
     std::vector<bool> cell_pass_basic_quality;
     loadPhotonNNModel();
     doClusterLoop(event, emcal_cell, cluster_container, stored_mc_truth_index, cell_pass_basic_quality);
@@ -419,7 +422,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
     if (!skimJets()) { // skimJets returns true if we should keep the event
         return false;
     }
-    fillMuonBranches();
+    fillMuonBranches(); // currently empty
     fillEgNtrial();
 
     _tree_event->Fill();
@@ -1696,8 +1699,8 @@ void AliAnalysisTaskNTGJ::getTruthIsolation(AliClusterContainer *cluster_contain
         TLorentzVector p;
         c->GetMomentum(p, _branch_primary_vertex);
 
-        // remake cluster_mc_truth_index set here
-        // rather than pass around a vector of sets
+        // remake cluster_mc_truth_index here for each cluster
+        // rather than pass around a vector of sets (one set per cluster)
         // see fillClusterBranches for more notes
         std::set<Int_t> cluster_mc_truth_index;
 
@@ -2073,7 +2076,7 @@ void AliAnalysisTaskNTGJ::getVoronoiAreaCluster(
             c->GetMomentum(p, _branch_primary_vertex);
 
             const fastjet::PseudoJet
-                pj(p.Px(), p.Py(), p.Pz(), p.P());
+            pj(p.Px(), p.Py(), p.Pz(), p.P());
 
             // FIXME: This needs to be moved somewhere in emcal.h
             static const double pseudorapidity_limit = 0.661;
@@ -2082,8 +2085,8 @@ void AliAnalysisTaskNTGJ::getVoronoiAreaCluster(
 
             // Fill only when inside the EMCAL (not DCAL)
             if (fabs(pj.pseudorapidity()) < pseudorapidity_limit &&
-                pj.phi_std() >= azimuth_limit_0 &&
-                pj.phi_std() < azimuth_limit_1) {
+                    pj.phi_std() >= azimuth_limit_0 &&
+                    pj.phi_std() < azimuth_limit_1) {
                 cluster_reco_index[icluster] = particle_reco_cluster.size();
                 // Note that all clusters are stored, at the moment,
                 // so this stored index is identical to i.
@@ -2096,8 +2099,8 @@ void AliAnalysisTaskNTGJ::getVoronoiAreaCluster(
 
     // calculate voronoi area
     for (std::vector<fastjet::PseudoJet>::const_iterator iterator =
-             particle_reco_cluster.begin();
-         iterator != particle_reco_cluster.end(); iterator++) {
+                particle_reco_cluster.begin();
+            iterator != particle_reco_cluster.end(); iterator++) {
         particle_reco_area_estimation_cluster.push_back(
             point_2d_t(iterator->pseudorapidity(),
                        iterator->phi_std()));
@@ -2195,17 +2198,17 @@ void AliAnalysisTaskNTGJ::getUECluster(
     // kT clustering
     static const double jet_kt_d_ue_estimation = 0.3;
     const fastjet::ClusterSequenceArea
-        cluster_sequence_ue_estimation_cluster(
-            particle_reco_cluster,
-            fastjet::JetDefinition(fastjet::JetDefinition(
-                fastjet::kt_algorithm, jet_kt_d_ue_estimation)),
-            fastjet::VoronoiAreaSpec());
+    cluster_sequence_ue_estimation_cluster(
+        particle_reco_cluster,
+        fastjet::JetDefinition(fastjet::JetDefinition(
+                                   fastjet::kt_algorithm, jet_kt_d_ue_estimation)),
+        fastjet::VoronoiAreaSpec());
     const std::vector<fastjet::PseudoJet> jet_ue_estimation_cluster =
         cluster_sequence_ue_estimation_cluster.inclusive_jets(0);
 
     // UE estimation
     ue_estimate_cluster = ue_estimation_median(cluster_sequence_ue_estimation_cluster,
-                                               particle_reco_area_cluster);
+                          particle_reco_area_cluster);
 
     _branch_ue_estimate_cluster_const = evaluate_ue_constant(ue_estimate_cluster.first);
     _branch_ue_estimate_cluster_const_se = ue_estimate_cluster.second;
@@ -2740,8 +2743,8 @@ bool AliAnalysisTaskNTGJ::skimJets()
     if (_skim_jet_min_pt[0] > -INFINITY) {
         // FIXME: JEC?
         std::vector<float>
-            pt(_branch_jet_ak04tpc_pt_raw,
-               _branch_jet_ak04tpc_pt_raw + _branch_njet_ak04tpc);
+        pt(_branch_jet_ak04tpc_pt_raw,
+           _branch_jet_ak04tpc_pt_raw + _branch_njet_ak04tpc);
         if (pt.size() >= 3) {
             std::partial_sort(pt.begin(), pt.begin() + 3, pt.end(),
                               std::greater<float>());
@@ -2750,10 +2753,10 @@ bool AliAnalysisTaskNTGJ::skimJets()
             std::sort(pt.begin(), pt.end(), std::greater<float>());
         }
         if (_skim_jet_min_pt.size() >= 3 &&
-            (pt.size() < 3 ||
-             !(pt[0] >= _skim_jet_min_pt[0] &&
-               pt[1] >= _skim_jet_min_pt[1] &&
-               pt[2] >= _skim_jet_min_pt[2]))) {
+                (pt.size() < 3 ||
+                 !(pt[0] >= _skim_jet_min_pt[0] &&
+                   pt[1] >= _skim_jet_min_pt[1] &&
+                   pt[2] >= _skim_jet_min_pt[2]))) {
             // Discard this event
             return false;
         }
@@ -2775,8 +2778,8 @@ bool AliAnalysisTaskNTGJ::skimJets()
     if (_skim_jet_average_pt > -INFINITY) {
         // FIXME: JEC?
         std::vector<float>
-            pt(_branch_jet_ak04tpc_pt_raw,
-               _branch_jet_ak04tpc_pt_raw + _branch_njet_ak04tpc);
+        pt(_branch_jet_ak04tpc_pt_raw,
+           _branch_jet_ak04tpc_pt_raw + _branch_njet_ak04tpc);
         if (pt.size() >= 2) {
             std::partial_sort(pt.begin(), pt.begin() + 2, pt.end(),
                               std::greater<float>());
@@ -2785,7 +2788,7 @@ bool AliAnalysisTaskNTGJ::skimJets()
             std::sort(pt.begin(), pt.end(), std::greater<float>());
         }
         if (!(pt.size() >= 2 &&
-              0.5 * (pt[0] + pt[1]) >= _skim_jet_average_pt)) {
+                0.5 * (pt[0] + pt[1]) >= _skim_jet_average_pt)) {
             // Discard this event
             return false;
         }
