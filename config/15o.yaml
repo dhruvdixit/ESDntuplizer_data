@@ -1,10 +1,10 @@
 gridWorkingDir:     workingdir
 gridOutputDir:      outputdir_15o_246766
-# aliROOTVersion:         v5-09-54a-2
-aliPhysicsVersion:      vAN-20200629-1
-package:                fastjet::v3.2.1_1.024-alice3-2
+aliPhysicsVersion:      vAN-20200629_ROOT6-1
+package:                fastjet::v3.2.1_1.024-alice3-71
+package:                boost::v1.72.0-alice1-1
 # package:                GCC-Toolchain::v7.3.0-alice2-7
-# package:                boost::v1.72.0-alice1-1
+# aliROOTVersion:         v5-09-54a-2
 gridDataDir:      /alice/data/2015/LHC15o
 dataPattern:      /pass1/AOD194/*/AliAOD.root
 runPrefix:                000
