@@ -26,6 +26,9 @@
 #ifndef CGAL_DISABLE_ROUNDING_MATH_CHECK
 #define CGAL_DISABLE_ROUNDING_MATH_CHECK
 #endif // CGAL_DISABLE_ROUNDING_MATH_CHECK
+#ifndef CGAL_NO_PRECONDITIONS
+#define CGAL_NO_PRECONDITIONS
+#endif // CGAL_NO_PRECONDITIONS
 // #include <CGAL/Exact_predicates_exact_constructions_kernel.h>
 // #include <CGAL/Delaunay_triangulation_2.h>
 // #include <CGAL/Voronoi_diagram_2.h>
