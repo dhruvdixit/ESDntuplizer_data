@@ -13,7 +13,7 @@ emcalCorrection:    emcal_correction_embed.yaml
 emcalGeometryFilename:  	geometry_2015.root
 emcalLocal2MasterFilename:  	EMCALlocal2master.root
 skimClusterMinE:        15.0
-splitMaxInputFileNumber: 4
+splitMaxInputFileNumber: 2
 isMC: false
 isEmbed: true
 
