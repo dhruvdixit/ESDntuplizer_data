@@ -501,7 +501,9 @@ private:
                   AliAODEvent *&aod_event);
     void getContainers(AliClusterContainer *&cluster_container,
                        std::vector<AliTrackContainer*> &track_containers,
-                       AliMCParticleContainer *&mc_container);
+                       AliMCParticleContainer *&mc_container,
+                       AliVCaloCells *&emcal_cell,
+                       AliVEvent *event);
     void setTrackCuts();
     void getMultiplicityCentralityEventPlane(AliVEvent *event);
     void loadPhotonNNModel();

@@ -356,6 +356,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
     AliAODEvent *aod_event = NULL;
     const AliVVertex *primary_vertex = NULL;
 
+    AliVCaloCells *emcal_cell = NULL;
     AliClusterContainer *cluster_container = NULL;
     std::vector<AliTrackContainer*> track_containers;
     AliMCParticleContainer *mc_container = NULL;
@@ -368,7 +369,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
         return false;
     }
 
-    getContainers(cluster_container, track_containers, mc_container);
+    getContainers(cluster_container, track_containers, mc_container, emcal_cell, event);
     if (mc_container) {
         loadMC(aod_event);
     }
@@ -376,8 +377,6 @@ Bool_t AliAnalysisTaskNTGJ::Run()
     getMultiplicityCentralityEventPlane(event);
     getBeamProperties(event, esd_event, aod_event, primary_vertex);
     getMetadata(esd_event, aod_event);
-
-    AliVCaloCells *emcal_cell = event->GetEMCALCells();
 
     if (!skimMultiplicityTracklet(event) || // skimMultiplicityTracklet returns true if we should keep the event
             !skimClusterE(cluster_container)) { // skimClusterE returns true if we should keep the event
@@ -549,7 +548,9 @@ bool AliAnalysisTaskNTGJ::getEvent(AliVEvent *&event,
 
 void AliAnalysisTaskNTGJ::getContainers(AliClusterContainer *&cluster_container,
                                         std::vector<AliTrackContainer*> &track_containers,
-                                        AliMCParticleContainer *&mc_container)
+                                        AliMCParticleContainer *&mc_container,
+                                        AliVCaloCells *&emcal_cell,
+                                        AliVEvent *event)
 {
     // set cluster_container, track_containers, and mc_container
     // by taking in references to pointers
@@ -568,6 +569,12 @@ void AliAnalysisTaskNTGJ::getContainers(AliClusterContainer *&cluster_container,
     AliDebugStream(2) << "Event has " << ntrack << " tracks" << std::endl;
     if (mc_container) {
         AliDebugStream(2) << "Event has " << mc_container->GetNParticles() << " MC particles" << std::endl;
+    }
+
+    if (_is_embed) {
+        emcal_cell = (AliVCaloCells*) event->FindListObject("emcalCellsCombined");
+    } else {
+        emcal_cell = event->GetEMCALCells();
     }
 }
 
