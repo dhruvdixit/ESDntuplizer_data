@@ -9,6 +9,7 @@ gridDataDir:			/alice/data/2018/LHC18q
 dataPattern:      /pass3/AOD/*/AliAOD.root
 runPrefix:        000
 runNumber:			  [295908]
+trackCutsPeriod:  lhc18q
 emcalCorrection:    emcal_correction_embed.yaml
 emcalGeometryFilename:  	geometry_2015.root
 emcalLocal2MasterFilename:  	EMCALlocal2master.root

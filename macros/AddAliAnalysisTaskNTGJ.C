@@ -156,16 +156,21 @@ AddAliAnalysisTaskNTGJ(TString name,
     task->AdoptClusterContainer(clusterContainer);
   }
 
-  if (track_cuts_period != "") {
-    AliTrackContainer::SetDefTrackCutsPeriod(track_cuts_period);
-  }
-
+  // by default, AliTrackContainer uses fTrackFilterType AliEmcalTrackSelection::kHybridTracks
+  // if we want to change this, we need to do SetTrackFilterType for each track container
+  // to find the appropriate number, look at http://alidoc.cern.ch/AliPhysics/master/class_ali_emcal_track_selection.html#a6c49adca402b67f481fa75a41f758444a237b6bd38b4e5e6e0300a4181065c872
   AliTrackContainer * datatrackContainer = new AliTrackContainer("usedefault");
+  if (track_cuts_period != "") {
+    datatrackContainer->SetTrackCutsPeriod(track_cuts_period);
+  }
   task->AdoptTrackContainer(datatrackContainer);
 
   if (is_embed) {
     AliTrackContainer * mctrackContainer = new AliTrackContainer("usedefault");
     mctrackContainer->SetIsEmbedding(kTRUE);
+    if (track_cuts_period != "") {
+      mctrackContainer->SetTrackCutsPeriod(track_cuts_period);
+    }
     task->AdoptTrackContainer(mctrackContainer);
   }
 
