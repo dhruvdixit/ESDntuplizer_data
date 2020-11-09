@@ -406,12 +406,13 @@ void runNTGJ(const char *config_filename = "config/18q.yaml",
     plugin->SetAdditionalLibs(
         "AliAnalysisTaskNTGJ.h "
         "AliAnalysisTaskNTGJ.cxx "
+        "cgal_4_9.h " +
+        oadb_filename + " " +
         "special_function.h mc_truth.h "
         "emcal_cell.h emcal.h isolation.h jet.h "
         "bad_channel.h "
         "eLut.cpp eLut.h half.cpp halfExport.h halfFunction.h "
         "half.h halfLimits.h toFloat.h "
-        "cgal_4_9.h "
         "keras_model.h keras_model.cc "
         "track_cuts.h "
         "photon_discr.model "
@@ -422,8 +423,7 @@ void runNTGJ(const char *config_filename = "config/18q.yaml",
         "libsiscone_spherical.so libfastjetplugins.so "
         "libfastjetcontribfragile.so " +
         mkl_filename + " " + efp7_filename + " " +
-        emcal_correction_filename + " " +
-        oadb_filename);
+        emcal_correction_filename);
     plugin->SetAnalysisSource("AliAnalysisTaskNTGJ.cxx");
 
     // Honor alien_CLOSE_SE for the output also, e.g. when
@@ -480,7 +480,7 @@ void runNTGJ(const char *config_filename = "config/18q.yaml",
         if (strcmp(run_mode, "local") != 0) {
             // uncomment this line to keep stderr and stdout
             // plugin->SetKeepLogs(kTRUE);
-            plugin->SetNtestFiles(1);
+            // plugin->SetNtestFiles(1);
             plugin->SetRunMode(run_mode);
             mgr->SetGridHandler(plugin);
             mgr->StartAnalysis("grid");
