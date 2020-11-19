@@ -408,6 +408,8 @@ void runNTGJ(const char *config_filename = "config/18q.yaml",
         "AliAnalysisTaskNTGJ.cxx "
         "cgal_4_9.h " +
         oadb_filename + " " +
+        // uncomment the next line if on lxplus
+        // "wintherace.h "
         "special_function.h mc_truth.h "
         "emcal_cell.h emcal.h isolation.h jet.h "
         "bad_channel.h "
@@ -480,7 +482,7 @@ void runNTGJ(const char *config_filename = "config/18q.yaml",
         if (strcmp(run_mode, "local") != 0) {
             // uncomment this line to keep stderr and stdout
             // plugin->SetKeepLogs(kTRUE);
-            // plugin->SetNtestFiles(1);
+            plugin->SetNtestFiles(1);
             plugin->SetRunMode(run_mode);
             mgr->SetGridHandler(plugin);
             mgr->StartAnalysis("grid");
