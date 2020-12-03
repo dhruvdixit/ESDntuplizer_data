@@ -86,8 +86,8 @@ AddAliAnalysisTaskNTGJ(TString name,
       embeddingHelper->SetFileListFilename(embed_local_file_list);
     }
     // If the embedded file is an ESD, then set:
-    // embeddingHelper->SetESD();
-    embeddingHelper->SetAOD();
+    embeddingHelper->SetESD();
+    //embeddingHelper->SetAOD();
     // Add additional configure as desired.
     // For some examples...
     // ... randomly select which file to start from:

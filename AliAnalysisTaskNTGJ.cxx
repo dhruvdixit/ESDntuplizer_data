@@ -371,7 +371,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
 
     getContainers(cluster_container, track_containers, mc_container, emcal_cell, event);
     if (mc_container) {
-        loadMC(aod_event);
+        loadMC(esd_event, aod_event);
     }
 
     getMultiplicityCentralityEventPlane(event);
@@ -520,6 +520,7 @@ bool AliAnalysisTaskNTGJ::getEvent(AliVEvent *&event,
     }
 
     esd_event = dynamic_cast<AliESDEvent *>(event);
+    AliDebugStream(2) << "Event has n events" << esd_event << std::endl;
 
     if (esd_event == NULL) {
         aod_event = dynamic_cast<AliAODEvent *>(event);
@@ -657,7 +658,7 @@ void AliAnalysisTaskNTGJ::loadPhotonNNModel()
     }
 }
 
-void AliAnalysisTaskNTGJ::loadMC(AliAODEvent *aod_event)
+void AliAnalysisTaskNTGJ::loadMC(AliESDEvent *esd_event, AliAODEvent *aod_event)
 {
     // lines 616-683
     _branch_eg_signal_process_id = INT_MIN;

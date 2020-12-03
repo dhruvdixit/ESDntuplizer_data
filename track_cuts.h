@@ -2,17 +2,17 @@
 
 namespace {
 
-	bool trackPassesCut0(AliAODTrack *t)
+	bool trackPassesCut0(AliVTrack *t)
 	{
 		return true;
 	}
 
-	bool trackPassesCut1(AliAODTrack *t)
+	bool trackPassesCut1(AliVTrack *t)
 	{
 		return true;
 	}
 
-	bool trackPassesCut2(AliAODTrack *t)
+	bool trackPassesCut2(AliVTrack *t)
 	{
 		bool passCut = true;
 
@@ -33,12 +33,12 @@ namespace {
 		return passCut;
 	}
 
-	bool trackPassesCut3(AliAODTrack *t)
+	bool trackPassesCut3(AliVTrack *t)
 	{
 		return true;
 	}
 
-	bool trackPassesCut4(AliAODTrack *t, AliVEvent *event)
+	bool trackPassesCut4(AliVTrack *t, AliVEvent *event)
 	{
 		bool passCut = true;
 
@@ -52,7 +52,7 @@ namespace {
 		if (passCut && (t->Pt() < 0.15)) { passCut = false; }
 		if (passCut && (t->Pt() > 1e+15)) { passCut = false; }
 		// SetMinNClustersITS(4)
-		if (passCut && (t->GetITSNcls() < 4)) { passCut = false; }
+		//if (passCut && (t->GetITSNcls() < 4)) { passCut = false; }
 		// SetMaxDCAToVertexXY(2.4)
 		// SetMaxDCAToVertexZ(3.2)
 		// SetDCAToVertex2D(kTRUE)
@@ -63,7 +63,7 @@ namespace {
 		return passCut;
 	}
 
-	UInt_t get_local_track_cut_bits(AliAODTrack *t, AliVEvent *event)
+	UInt_t get_local_track_cut_bits(AliVTrack *t, AliVEvent *event)
 	{
 		UInt_t _local_track_cut_bits = 0;
 
@@ -76,7 +76,7 @@ namespace {
 		return _local_track_cut_bits;
 	}
 
-	bool trackPassesTPCCuts(AliAODTrack *t) {
+	bool trackPassesTPCCuts(AliVTrack *t) {
 		bool passCut = true;
 		passCut = passCut && trackPassesCut0(t);
 		passCut = passCut && trackPassesCut1(t);

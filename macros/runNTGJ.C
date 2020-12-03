@@ -140,10 +140,11 @@ void runNTGJ(const char *config_filename = "config/18q.yaml",
 
     AliAnalysisManager *mgr = new AliAnalysisManager();
 
+    //gROOT->ProcessLine(".x $ALICE_ROOT/ANALYSIS/macros/train/AddAODHandler.C");
     gROOT->ProcessLine(".x $ALICE_ROOT/ANALYSIS/macros/train/"
-                       "AddAODHandler.C");
-    gROOT->ProcessLine(".x $ALICE_ROOT/ANALYSIS/macros/train/"
-                       "AddMCHandler.C");
+                       "AddESDHandler.C");
+   // gROOT->ProcessLine(".x $ALICE_ROOT/ANALYSIS/macros/train/"
+     //                  "AddMCHandler.C");
 
     AliAnalysisAlien *plugin = new AliAnalysisAlien("pluginNTGJ");
 
@@ -408,8 +409,6 @@ void runNTGJ(const char *config_filename = "config/18q.yaml",
         "AliAnalysisTaskNTGJ.cxx "
         "cgal_4_9.h " +
         oadb_filename + " " +
-        // uncomment the next line if on lxplus
-        // "wintherace.h "
         "special_function.h mc_truth.h "
         "emcal_cell.h emcal.h isolation.h jet.h "
         "bad_channel.h "
@@ -481,7 +480,7 @@ void runNTGJ(const char *config_filename = "config/18q.yaml",
     if (mgr->InitAnalysis()) {
         if (strcmp(run_mode, "local") != 0) {
             // uncomment this line to keep stderr and stdout
-            // plugin->SetKeepLogs(kTRUE);
+            plugin->SetKeepLogs(kTRUE);
             plugin->SetNtestFiles(1);
             plugin->SetRunMode(run_mode);
             mgr->SetGridHandler(plugin);
@@ -490,20 +489,20 @@ void runNTGJ(const char *config_filename = "config/18q.yaml",
             UInt_t iNumFiles = 1;
             UInt_t iNumEvents = 10;
 
-            // local analysis with AOD
+            // local analysis with ESD
             TString sLocalFiles(local_file_list);
             TChain* pChain = 0;
             #ifdef __CLING__
-            std::stringstream aodChain;
-            aodChain << ".x " << gSystem->Getenv("ALICE_PHYSICS") <<  "/PWG/EMCAL/macros/CreateAODChain.C(";
-            aodChain << "\"" << sLocalFiles.Data() << "\", ";
-            aodChain << iNumEvents << ", ";
-            aodChain << 0 << ", ";
-            aodChain << std::boolalpha << kFALSE << ");";
-            pChain = reinterpret_cast<TChain *>(gROOT->ProcessLine(aodChain.str().c_str()));
+            std::stringstream esdChain;
+            esdChain << ".x " << gSystem->Getenv("ALICE_PHYSICS") <<  "/PWG/EMCAL/macros/CreateESDChain.C(";
+            esdChain << "\"" << sLocalFiles.Data() << "\", ";
+            esdChain << iNumEvents << ", ";
+            esdChain << 0 << ", ";
+            esdChain << std::boolalpha << kFALSE << ");";
+            pChain = reinterpret_cast<TChain *>(gROOT->ProcessLine(esdChain.str().c_str()));
             #else
-            gROOT->LoadMacro("$ALICE_PHYSICS/PWG/EMCAL/macros/CreateAODChain.C");
-            pChain = CreateAODChain(sLocalFiles.Data(), iNumFiles, 0, kFALSE);
+            gROOT->LoadMacro("$ALICE_PHYSICS/PWG/EMCAL/macros/CreateESDChain.C");
+            pChain = CreateESDChain(sLocalFiles.Data(), iNumFiles, 0, kFALSE);
             #endif
 
             Printf("Starting Analysis...");

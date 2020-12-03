@@ -1,0 +1,16 @@
+gridWorkingDir:			workingdir_13f_1runs_test3
+gridOutputDir:			outputdir_13f_1runs_test
+aliPhysicsVersion:		vAN-20200629_ROOT6-1
+package:			fastjet::v3.2.1_1.024-alice3-71
+package:			boost::v1.72.0-alice1-1
+trackCutsPeriod:		kITSPureTracks
+gridDataDir:			/alice/data/2013/LHC13f
+dataPattern:			/pass4/*/AliESDs.root
+runPrefix:			000
+runNumber:			[196608]
+emcalCorrection:		emcal_correction_pPb.yaml
+emcalGeometryFilename:		geometry_2015.root
+emcalLocal2MasterFilename:	EMCALlocal2master.root
+splitMaxInputFileNumber:	30.0
+isMC:				false
+isEmbed:			false
