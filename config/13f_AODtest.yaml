@@ -1,8 +1,11 @@
-gridWorkingDir:			workingdir
-gridOutputDir:			outputdir_13f_1runs_test
-aliPhysicsVersion:		vAN-20200629_ROOT6-1
-package:			fastjet::v3.2.1_1.024-alice3-71
-package:			boost::v1.72.0-alice1-1
+gridWorkingDir:			workingdirAOD
+gridOutputDir:			outputdir_13f_1runs_test_woCorr
+#aliPhysicsVersion:		vAN-20200629_ROOT6-1
+#package:			fastjet::v3.2.1_1.024-alice3-71
+#package:			boost::v1.72.0-alice1-1
+aliPhysicsVersion:		vAN-20201205_ROOT6-1
+package:			fastjet::v3.2.1_1.024-alice3-94
+package:			boost::v1.72.0-alice2-7
 trackCutsPeriod:		lhc13f
 gridDataDir:			/alice/data/2013/LHC13f
 dataPattern:			/pass4/AOD/*/AliAOD.root

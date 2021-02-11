@@ -366,7 +366,9 @@ Bool_t AliAnalysisTaskNTGJ::Run()
 
     // event-level initialization and branches
     if (!getEvent(event, esd_event, aod_event)) { // getEvent returns false if the event is null
-        return false;
+      _branch_run_number = 100;
+      _tree_event->Fill();
+      return false;
     }
 
     getContainers(cluster_container, track_containers, mc_container, emcal_cell, event);
@@ -504,6 +506,7 @@ bool AliAnalysisTaskNTGJ::getEvent(AliVEvent *&event,
     event = InputEvent();
 
     if (event == NULL) {
+      _branch_run_number = 50;
         return false;
     }
 
@@ -525,7 +528,8 @@ bool AliAnalysisTaskNTGJ::getEvent(AliVEvent *&event,
     if (esd_event == NULL) {
         aod_event = dynamic_cast<AliAODEvent *>(event);
         if (aod_event == NULL) {
-            return false;
+	  _branch_period_number = 5;
+	  return false;
         }
     }
 
