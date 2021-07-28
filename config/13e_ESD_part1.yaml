@@ -1,14 +1,12 @@
-gridWorkingDir:			workingdir_13f_1runs_ESDTests
-gridOutputDir:			outputdir_13f_1runs_kEMCEGA_kINT7_kANy_mannualMode_greenlight_nonLinCorrFixed
+gridWorkingDir:			workingdirESD
+gridOutputDir:			outputdir_13e_part1_kEMCEGA_kINT7_mannualMode_greenlight_nonLinCorr
 aliPhysicsVersion:		vAN-20201205_ROOT6-1
 package:			fastjet::v3.2.1_1.024-alice3-94
 package:			boost::v1.72.0-alice2-7
-#trackCutsPeriod:		lhc13f
-gridDataDir:			/alice/data/2013/LHC13f
+gridDataDir:			/alice/data/2013/LHC13e
 dataPattern:			/pass4/*/AliESDs.root
 runPrefix:			000
-runNumber:			[197302]
-#emcalCorrection:		emcal_correction_pPb.yaml
+runNumber:			[196310, 196309, 196308, 196214, 196208, 196201, 196200, 196199, 196197, 196194]
 emcalCorrection:		emcal_correction_nonLin.yaml
 emcalGeometryFilename:		geometry_2015.root
 emcalLocal2MasterFilename:	EMCALlocal2master.root

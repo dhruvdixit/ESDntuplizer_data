@@ -160,10 +160,24 @@ AddAliAnalysisTaskNTGJ(TString name,
   // if we want to change this, we need to do SetTrackFilterType for each track container
   // to find the appropriate number, look at http://alidoc.cern.ch/AliPhysics/master/class_ali_emcal_track_selection.html#a6c49adca402b67f481fa75a41f758444a237b6bd38b4e5e6e0300a4181065c872
   AliTrackContainer * datatrackContainer = new AliTrackContainer("usedefault");
-  if (track_cuts_period != "") {
-    datatrackContainer->SetTrackCutsPeriod(track_cuts_period);
-  }
+  //if (track_cuts_period != "") {
+  //  datatrackContainer->SetTrackCutsPeriod(track_cuts_period);
+  //}
+
   task->AdoptTrackContainer(datatrackContainer);
+  datatrackContainer->SetTrackFilterType(AliEmcalTrackSelection::kCustomTrackFilter);
+  AliESDtrackCuts* esdITSonlyCuts = new AliESDtrackCuts("AliESDtrackCuts");
+  esdITSonlyCuts->SetRequireITSPureStandAlone(kTRUE);
+  esdITSonlyCuts->SetPtRange(0.15, 1e+15);
+  esdITSonlyCuts->SetMinNClustersITS(4);
+  esdITSonlyCuts->SetMaxDCAToVertexXY(2.4);
+  esdITSonlyCuts->SetMaxDCAToVertexZ(3.2);
+  esdITSonlyCuts->SetDCAToVertex2D(kTRUE);
+  esdITSonlyCuts->SetMaxChi2PerClusterITS(36);
+  datatrackContainer->AddTrackCuts(esdITSonlyCuts);
+  //task->GetTrackContainer(0)->AddTrackCuts(esdITSonlyCuts);
+  //task->AdoptTrackContainer(datatrackContainer);
+
 
   if (is_embed) {
     AliTrackContainer * mctrackContainer = new AliTrackContainer("usedefault");
@@ -216,7 +230,8 @@ AddAliAnalysisTaskNTGJ(TString name,
   reco_util->SetNumberOfCellsFromEMCALBorder(0);
   reco_util->SwitchOnRecalibration();
   reco_util->SwitchOnRunDepCorrection();
-
+  
+  physics_selection = true;
   if (physics_selection) {
 #ifndef __CLING__
     gROOT->LoadMacro("$ALICE_PHYSICS/OADB/macros/"
@@ -228,7 +243,12 @@ AddAliAnalysisTaskNTGJ(TString name,
                               physics_selection_pileup_cut);
 
     // trying to reduce the memory
-    task->SelectCollisionCandidates(AliVEvent::kAny);
+    //task->SelectCollisionCandidates(AliVEvent::kEMCEGA);
+    task->SelectCollisionCandidates(AliVEvent::kEMCEGA | AliVEvent::kINT7);
+    //task->SelectCollisionCandidates(AliVEvent::kEMCEGA | AliVEvent::kINT7 | AliVEvent::kAny);
+    //task->SelectCollisionCandidates(AliVEvent::kAny);
+    //task->SelectCollisionCandidates(AliVEvent::kCaloOnly | AliVEvent::kINT7);
+    //task->SelectCollisionCandidates(AliVEvent::kCaloOnly);
   }
 
   mgr->AddTask(task);
