@@ -1,0 +1,15 @@
+gridWorkingDir:			workingdir_17g6a1
+gridOutputDir:			outputdir_17g6a1_kEMCEGA_kINT7_mannualMode_greenlight
+aliPhysicsVersion:		vAN-20201205_ROOT6-1
+package:			fastjet::v3.2.1_1.024-alice3-94
+package:			boost::v1.72.0-alice2-7
+gridDataDir:			
+dataPattern:			
+runPrefix:			000
+runNumber:			[197342, 197341, 197302, 197300, 197299, 197298, 197297, 197296, 197260, 197258]
+emcalCorrection:		emcal_correction_MC.yaml
+emcalGeometryFilename:		geometry_2015.root
+emcalLocal2MasterFilename:	EMCALlocal2master.root
+splitMaxInputFileNumber:	20.0
+isMC:				false
+isEmbed:			false

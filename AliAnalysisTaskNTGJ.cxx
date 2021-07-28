@@ -42,6 +42,9 @@
 #include <AliAODVertex.h>
 #include <AliAODTracklets.h>
 #include <AliAODMCHeader.h>
+
+#include <AliESDtrack.h>
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Weffc++"
 #include <AliAnalysisTaskEmcalEmbeddingHelper.h>
@@ -292,7 +295,8 @@ AliAnalysisTaskNTGJ::~AliAnalysisTaskNTGJ(void)
 void AliAnalysisTaskNTGJ::UserCreateOutputObjects(void)
 {
     AliAnalysisTaskEmcal::UserCreateOutputObjects();
-    // fAliEventCuts.fGreenLight = true;
+    fAliEventCuts.SetManualMode(true);
+    fAliEventCuts.fGreenLight = true;
 
     TFile *file = OpenFile(1);
 
@@ -351,7 +355,7 @@ void AliAnalysisTaskNTGJ::UserCreateOutputObjects(void)
 
 Bool_t AliAnalysisTaskNTGJ::Run()
 {
-    AliVEvent *event = NULL;
+  AliVEvent *event = NULL;
     AliESDEvent *esd_event = NULL;
     AliAODEvent *aod_event = NULL;
     const AliVVertex *primary_vertex = NULL;
@@ -363,11 +367,9 @@ Bool_t AliAnalysisTaskNTGJ::Run()
 
     // for some reason, moving loadEmcalGeometry later causes a change in cell_position
     loadEmcalGeometry();
-
+    
     // event-level initialization and branches
     if (!getEvent(event, esd_event, aod_event)) { // getEvent returns false if the event is null
-      _branch_run_number = 100;
-      _tree_event->Fill();
       return false;
     }
 
@@ -402,7 +404,7 @@ Bool_t AliAnalysisTaskNTGJ::Run()
 
     // tracks
     setTrackCuts(); // currently empty
-    doTrackLoop(event, aod_event, track_containers, mc_container, stored_mc_truth_index, primary_vertex);
+    doTrackLoop(event, esd_event, aod_event, track_containers, mc_container, stored_mc_truth_index, primary_vertex);
 
     // clusters and cells
     std::vector<bool> cell_pass_basic_quality;
@@ -528,7 +530,6 @@ bool AliAnalysisTaskNTGJ::getEvent(AliVEvent *&event,
     if (esd_event == NULL) {
         aod_event = dynamic_cast<AliAODEvent *>(event);
         if (aod_event == NULL) {
-	  _branch_period_number = 5;
 	  return false;
         }
     }
@@ -585,6 +586,99 @@ void AliAnalysisTaskNTGJ::getContainers(AliClusterContainer *&cluster_container,
 
 void AliAnalysisTaskNTGJ::setTrackCuts()
 {
+        if (_f1_ncluster_tpc_linear_pt_dep == NULL) {
+        // PWG-JE cuts, see AddTrackCutsLHC10h() in
+        // AliPhysics/PWGJE/macros/AddTaskESDFilterPWGJETrain.C
+
+        _f1_ncluster_tpc_linear_pt_dep =
+	  new TFormula("_f1_ncluster_tpc_linear_pt_dep",
+		       "70.+30./20.*x");
+
+        for (size_t i = 0; i < 2; i++) {
+	  _track_cut.push_back(AliESDtrackCuts("AliESDtrackCuts"));
+	  _track_cut.back().
+	    SetMinNClustersTPCPtDep(_f1_ncluster_tpc_linear_pt_dep,
+				    20.0);
+	  _track_cut.back().SetMinNClustersTPC(70);
+	  _track_cut.back().SetMaxChi2PerClusterTPC(4);
+	  _track_cut.back().SetRequireTPCStandAlone(kTRUE);
+	  _track_cut.back().SetAcceptKinkDaughters(kFALSE);
+	  _track_cut.back().SetRequireTPCRefit(kTRUE);
+	  _track_cut.back().SetMaxFractionSharedTPCClusters(0.4);
+	  _track_cut.back().SetRequireITSRefit(kTRUE);
+	  _track_cut.back().SetMaxDCAToVertexXY(2.4);
+	  _track_cut.back().SetMaxDCAToVertexZ(3.2);
+	  _track_cut.back().SetDCAToVertex2D(kTRUE);
+	  _track_cut.back().SetMaxChi2PerClusterITS(36);
+	  _track_cut.back().SetMaxChi2TPCConstrainedGlobal(36);
+	  _track_cut.back().SetRequireSigmaToVertex(kFALSE);
+	  _track_cut.back().SetEtaRange(-0.9, 0.9);
+	  _track_cut.back().SetPtRange(0.15, 1e+15);
+
+	  if (i == 0) {
+	    _track_cut.back().
+	      SetClusterRequirementITS(AliESDtrackCuts::kSPD,
+				       AliESDtrackCuts::kAny);
+	  }
+	  else {
+	    _track_cut.back().SetRequireITSRefit(kFALSE);
+	  }
+        }
+
+        // "2015 PbPb" cuts, see
+        // AliESDtrackCuts::GetStandardITSTPCTrackCuts2015PbPb() in
+        // AliRoot/ANALYSIS/ANALYSISalice/AliESDtrackCuts.cxx . Both
+        // clusterCut = 0 or 1 cases are kept, but the options
+        // selPrimaries = kTRUE, cutAcceptanceEdges = kTRUE,
+        // removeDistortedRegions = kFALSE are fixed
+
+        for (size_t i = 0; i < 2; i++) {
+	  _track_cut.push_back(AliESDtrackCuts("AliESDtrackCuts"));
+
+	  if (i == 0) {
+	    _track_cut.back().SetMinNClustersTPC(50);
+	  }
+	  else {
+	    _track_cut.back().SetMinNCrossedRowsTPC(70);
+	    _track_cut.back().
+	      SetMinRatioCrossedRowsOverFindableClustersTPC(0.8);
+	  }
+	  // cutAcceptanceEdges == kTRUE
+	  _track_cut.back().SetCutGeoNcrNcl(2., 130., 1.5, 0.0, 0.0);
+	  _track_cut.back().SetMaxChi2PerClusterTPC(4);
+	  _track_cut.back().SetAcceptKinkDaughters(kFALSE);
+	  _track_cut.back().SetRequireTPCRefit(kTRUE);
+	  _track_cut.back().SetRequireITSRefit(kTRUE);
+	  _track_cut.back().
+	    SetClusterRequirementITS(AliESDtrackCuts::kSPD,
+				     AliESDtrackCuts::kAny);
+	  // selPrimaries == kTRUE
+	  _track_cut.back().
+	    SetMaxDCAToVertexXYPtDep("0.0105+0.0350/pt^1.1");
+	  // selPrimaries == kTRUE
+	  _track_cut.back().SetMaxChi2TPCConstrainedGlobal(36);
+	  _track_cut.back().SetMaxDCAToVertexZ(2);
+	  _track_cut.back().SetDCAToVertex2D(kFALSE);
+	  _track_cut.back().SetRequireSigmaToVertex(kFALSE);
+	  _track_cut.back().SetMaxChi2PerClusterITS(36);
+        }
+
+        // Relaxed version of the union of
+        // AliESDtrackCuts::GetStandardITSPureSATrackCuts2009() and
+        // AliESDtrackCuts::GetStandardITSPureSATrackCuts2010() in
+        // AliRoot/ANALYSIS/ANALYSISalice/AliESDtrackCuts.cxx for ITS
+        // + SDD tracks
+
+        _track_cut.push_back(AliESDtrackCuts("AliESDtrackCuts"));
+
+        _track_cut.back().SetRequireITSPureStandAlone(kTRUE);
+        _track_cut.back().SetPtRange(0.15, 1e+15);
+        _track_cut.back().SetMinNClustersITS(4);
+        _track_cut.back().SetMaxDCAToVertexXY(2.4);
+        _track_cut.back().SetMaxDCAToVertexZ(3.2);
+        _track_cut.back().SetDCAToVertex2D(kTRUE);
+        _track_cut.back().SetMaxChi2PerClusterITS(36);
+      }
 
 }
 
@@ -889,7 +983,8 @@ bool AliAnalysisTaskNTGJ::skimClusterE(AliClusterContainer *cluster_container)
 
             TLorentzVector p;
 
-            c->GetMomentum(p, _branch_primary_vertex);
+            //c->GetMomentum(p, _branch_primary_vertex);//raw energy
+	    c->GetMomentum(p, _branch_primary_vertex, AliVCluster::kNonLinCorr);//non-linearity corrected energy
             cluster_e_max = std::max(cluster_e_max, p.E());
         }
         if (!(cluster_e_max >= _skim_cluster_min_e)) {
@@ -1029,7 +1124,8 @@ void AliAnalysisTaskNTGJ::getPrimaryMCParticles(AliMCParticleContainer *mc_conta
 }
 // =================================================================================================================
 void AliAnalysisTaskNTGJ::doTrackLoop(AliVEvent *event,
-                                      AliAODEvent *aod_event,
+				      AliESDEvent *esd_event,
+				      AliAODEvent *aod_event,
                                       std::vector<AliTrackContainer*> track_containers,
                                       AliMCParticleContainer *mc_container,
                                       std::vector<size_t> stored_mc_truth_index,
@@ -1061,9 +1157,10 @@ void AliAnalysisTaskNTGJ::doTrackLoop(AliVEvent *event,
                   bit 5 is ITS only cuts
                 */
                 UInt_t _local_track_cut_bits = get_local_track_cut_bits(t, event);
-                if (_local_track_cut_bits == 0)
-                    continue;
+		if (_local_track_cut_bits == 0)
+		  continue;
 
+		
                 if ((_local_track_cut_bits & 15) != 0) {
                     kahan_sum(_branch_met_tpc[0], met_tpc_kahan_error[0], t->Px());
                     kahan_sum(_branch_met_tpc[1], met_tpc_kahan_error[1], t->Py());
@@ -1157,6 +1254,151 @@ void AliAnalysisTaskNTGJ::doTrackLoop(AliVEvent *event,
                 itrack++;
             }
         }
+    }
+
+    else if (esd_event != NULL) {
+      Int_t itrack = 0;
+      for (auto track_container : track_containers) {
+	//track_container->AddTrackCuts(_track_cut[4]);
+	for (auto track : track_container->accepted()) {
+	  if (track == NULL)
+	    continue;
+	  
+	  AliESDtrack * t = static_cast<AliESDtrack*>(track);
+	  
+	  if (t == NULL) {
+	    continue;
+	  }
+
+	  bool store_track = false;
+
+	  /*// Apply PWG-JE cuts (track cuts 0 and 1)
+	  
+	  if (_track_cut[0].AcceptTrack(t) ||
+	      _track_cut[1].AcceptTrack(t)) {
+	    kahan_sum(_branch_met_tpc[0], met_tpc_kahan_error[0],
+		      t->Px());
+	    kahan_sum(_branch_met_tpc[1], met_tpc_kahan_error[1],
+		      t->Py());
+		      }//*/
+
+	  // Apply ITS only cut (track cut 4)
+
+	  if (_track_cut[4].AcceptTrack(t)) {
+	    kahan_sum(_branch_met_its[0], met_its_kahan_error[0],
+		      t->Px());
+	    kahan_sum(_branch_met_its[1], met_its_kahan_error[1],
+		      t->Py());
+	    store_track = true;
+	  }
+
+	  // Store tracks passing PWG-JE *or* "2015 PbPb" cuts
+
+
+	  
+	  /*for (std::vector<AliESDtrackCuts>::iterator iterator =
+		 _track_cut.begin();
+	       iterator != _track_cut.end(); iterator++) {
+	    if (iterator->AcceptTrack(t)) {
+	      store_track = true;
+	      break;
+	    }
+	    }//*/
+
+	  if (store_track) {
+	    _branch_track_e[_branch_ntrack] = half(t->E());
+	    _branch_track_pt[_branch_ntrack] = half(t->Pt());
+	    _branch_track_eta[_branch_ntrack] = half(t->Eta());
+	    _branch_track_phi[_branch_ntrack] =
+	      half(angular_range_reduce(t->Phi()));
+	    if (gGeoManager != NULL) {
+	      _branch_track_eta_emcal[_branch_ntrack] =
+		half(t->GetTrackEtaOnEMCal());
+	      _branch_track_phi_emcal[_branch_ntrack] =
+		half(angular_range_reduce(
+					  t->GetTrackPhiOnEMCal()));
+	    }
+	    else {
+	      _branch_track_eta_emcal[_branch_ntrack] = NAN;
+	      _branch_track_phi_emcal[_branch_ntrack] = NAN;
+	    }
+	    _branch_track_charge[_branch_ntrack] =
+	      std::min(static_cast<Short_t>(CHAR_MAX),
+		       std::max(static_cast<Short_t>(CHAR_MIN),
+				t->Charge()));
+	    
+	    // Shortened track quality bit mask. Here bit 0 and 1
+                // are the PWG-JE's bit 4 and 8. Test for
+                // ((track_quality[i] & 3) != 0), i being the track
+                // index, to get PWG-JE's "272" (= 1 << 4 | 1 << 8)
+                // cut. Test for ((track_quality[i] & 4) == 0) and
+                // ((track_quality[i] & 8) == 0) for the "2015 PbPb" cut
+                // with clusterCut = 0 and 1.
+
+                _branch_track_quality[_branch_ntrack] = 0U;
+		size_t j = 4;
+                //for (size_t j = 0; j < _track_cut.size(); j++) {
+		_branch_track_quality[_branch_ntrack] |=  _track_cut[j].AcceptTrack(t) ? 1U << j : 0;
+		    //}
+
+                _branch_track_tpc_dedx[_branch_ntrack] = half(t->GetTPCsignal());
+
+                static const Int_t mode_inner_wall = 1;
+                static const Double_t dead_zone_width_cm = 2;
+                static const Double_t max_z_cm = 220;
+
+                _branch_track_tpc_length_active_zone[_branch_ntrack] = NAN;
+                if (t->GetInnerParam() != NULL) {
+		  _branch_track_tpc_length_active_zone[_branch_ntrack] = half(t->GetLengthInActiveZone(mode_inner_wall, dead_zone_width_cm, max_z_cm, event->GetMagneticField()));
+                }
+                _branch_track_tpc_xrow[_branch_ntrack] =
+		  std::min(static_cast<Float_t>(UCHAR_MAX),
+			   std::max(0.0F, t->GetTPCCrossedRows()));
+                _branch_track_tpc_ncluster[_branch_ntrack] =
+		  std::min(UCHAR_MAX,
+			   std::max(0, t->GetNumberOfTPCClusters()));
+                _branch_track_tpc_ncluster_dedx[_branch_ntrack] =
+		  std::min(static_cast<UShort_t>(UCHAR_MAX),
+			   std::max(static_cast<UShort_t>(0),
+				    t->GetTPCsignalN()));
+                _branch_track_tpc_ncluster_findable[_branch_ntrack] =
+		  std::min(static_cast<UShort_t>(UCHAR_MAX),
+			   std::max(static_cast<UShort_t>(0),
+				    t->GetTPCNclsF()));
+                _branch_track_its_ncluster[_branch_ntrack] =
+		  t->GetNumberOfITSClusters();
+                _branch_track_its_chi_square[_branch_ntrack] =
+		  half(t->GetITSchi2());
+
+                Double_t dz[2] = { NAN, NAN };
+                Double_t cov[3] = { NAN, NAN, NAN };
+
+                if (t->PropagateToDCA
+                    (primary_vertex, event->GetMagneticField(),
+                     kVeryBig, dz, cov) == kTRUE) {
+                    _branch_track_dca_xy[_branch_ntrack] =
+		      half(dz[0]);
+                    _branch_track_dca_z[_branch_ntrack] =
+		      half(dz[1]);
+                }
+		
+		const Int_t mc_truth_index = t->GetLabel();
+
+                _branch_track_mc_truth_index[_branch_ntrack] =
+		  SAFE_MC_TRUTH_INDEX_TO_USHRT(mc_truth_index);
+                _branch_track_voronoi_area[_branch_ntrack] = 0;
+
+                _branch_ntrack++;
+                if (_branch_ntrack >= NTRACK_MAX) {
+		  break;
+                }
+
+                itrack++;
+		
+	
+	  }
+	}
+      }
     }
 }
 
@@ -2030,16 +2272,30 @@ void AliAnalysisTaskNTGJ::getVoronoiAreaIts(
             if (track == NULL) {
                 continue;
             }
-
-            AliAODTrack * t = static_cast<AliAODTrack*>(track);
-
-            // eventually switch this back to trackPassesCut4 when that doesn't need the event itself anymore
-            if ((_branch_track_quality[itrack] & 16) != 0) {
+	    
+            //AliAODTrack * tAOD;
+	    AliESDtrack * tESD;
+	    //tAOD = dynamic_cast<AliAODTrack *>(track);
+	    tESD = static_cast<AliESDtrack *>(track);
+            //if(tAOD == NULL){
+	    //tESD = dynamic_cast<AliESDtrack *>(track);
+	    //if ((_branch_track_quality[itrack] & 16) != 0) {
+	    track_reco_index_its[itrack] = particle_reco_its.size();
+	    reco_stored_track_index_its.push_back(itrack);
+	    particle_reco_its.push_back(fastjet::PseudoJet(
+							   tESD->Px(), tESD->Py(), tESD->Pz(), tESD->P()));
+	      //}
+	    //}
+    
+	    /*else if(tAOD != NULL){
+	      // eventually switch this back to trackPassesCut4 when that doesn't need the event itself anymore
+	      if ((_branch_track_quality[itrack] & 16) != 0) {
                 track_reco_index_its[itrack] = particle_reco_its.size();
                 reco_stored_track_index_its.push_back(itrack);
                 particle_reco_its.push_back(fastjet::PseudoJet(
-                                                t->Px(), t->Py(), t->Pz(), t->P()));
-            }
+							       t->Px(), t->Py(), t->Pz(), t->P()));
+	      }
+	      }//*/
 
             itrack++;
         }

@@ -529,6 +529,7 @@ private:
                                std::vector<Int_t> &reverse_stored_mc_truth_index,
                                std::vector<Int_t> &reverse_stored_parton_algorithmic_index);
     void doTrackLoop(AliVEvent *event,
+		     AliESDEvent *esd_event,
                      AliAODEvent *aod_event,
                      std::vector<AliTrackContainer*> track_containers,
                      AliMCParticleContainer *mc_container,
