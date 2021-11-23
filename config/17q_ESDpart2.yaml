@@ -1,18 +1,17 @@
-gridWorkingDir:			workingdir_17q_ESD_split5_NL
-gridOutputDir:			outputdir_17q_ITSonly_run282391_kMuonCalo_mannualAndGreen_split5_wNL
+gridWorkingDir:			workingdir_17q_ESD3
+gridOutputDir:			outputdir_17q_ITSonly_1runs_part1_kCaloOnlykINTkAny_mannualAndGreen_split10
 aliPhysicsVersion:		vAN-20201205_ROOT6-1
 package:			fastjet::v3.2.1_1.024-alice3-94
 package:			boost::v1.72.0-alice2-7
 gridDataDir:			/alice/data/2017/LHC17q
 dataPattern:			/muon_calo_pass1/*/AliESDs.root
 runPrefix:			000
-runNumber:			[282391]
+runNumber:			[282440]
 #runNumber:			[282440, 282437, 282415, 282411, 282402, 282399, 282398, 282393, 282392, 282391]
 #runNumber:			[282441, 282440, 282439, 282437, 282415, 282411, 282402, 282399, 282398, 282393, 282392, 282391]
-#emcalCorrection:		emcal_correction_pp.yaml
-emcalCorrection:		emcal_correction_nonLin_pp.yaml
+emcalCorrection:		emcal_correction_pp.yaml
 emcalGeometryFilename:		geometry_2015.root
 emcalLocal2MasterFilename:	EMCALlocal2master.root
-splitMaxInputFileNumber:	5.0
+splitMaxInputFileNumber:	10.0
 isMC:				false
 isEmbed:			false

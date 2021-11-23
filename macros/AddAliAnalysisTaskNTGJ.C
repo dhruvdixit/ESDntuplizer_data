@@ -244,11 +244,15 @@ AddAliAnalysisTaskNTGJ(TString name,
 
     // trying to reduce the memory
     //task->SelectCollisionCandidates(AliVEvent::kEMCEGA);
-    task->SelectCollisionCandidates(AliVEvent::kEMCEGA | AliVEvent::kINT7);
-    //task->SelectCollisionCandidates(AliVEvent::kEMCEGA | AliVEvent::kINT7 | AliVEvent::kAny);
-    //task->SelectCollisionCandidates(AliVEvent::kAny);
-    //task->SelectCollisionCandidates(AliVEvent::kCaloOnly | AliVEvent::kINT7);
+    task->SelectCollisionCandidates(AliVEvent::kINT7);
     //task->SelectCollisionCandidates(AliVEvent::kCaloOnly);
+    //task->SelectCollisionCandidates(AliVEvent::kMuonCalo);
+    //task->SelectCollisionCandidates(AliVEvent::kAny);
+    //task->SelectCollisionCandidates(AliVEvent::kEMCEGA | AliVEvent::kINT7);
+    //task->SelectCollisionCandidates(AliVEvent::kMuonCalo | AliVEvent::kINT7);
+    //task->SelectCollisionCandidates(AliVEvent::kEMCEGA | AliVEvent::kINT7 | AliVEvent::kAny);
+    //task->SelectCollisionCandidates(AliVEvent::kCaloOnly | AliVEvent::kINT7 | AliVEvent::kAny);
+
   }
 
   mgr->AddTask(task);

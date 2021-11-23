@@ -1,0 +1,50 @@
+pass: "pass4"
+inputObjects:
+    clusterContainers:
+        defaultClusterContainer:
+            branchName: "usedefault"
+sharedParameters:
+    enableMCGenRemovTrack: false
+
+CellEnergy:
+    createHistos: true
+    enabled: true
+    enableNewTempCalib: true
+    enableShaperCorrection: true
+CellBadChannel:
+    enabled: true
+    load1DBadChMap: true
+CellTimeCalib:
+    enabled: true
+    createHistos: true
+    doCalibrateLowGain: true
+    doMergedBCs: true
+    doCalibMergedLG: false
+
+
+Clusterizer:
+    enabled: true
+    clusterizer: kClusterizerv1
+    cellE: 0.1
+    seedE: 0.5
+    cellTimeMin: -1
+    cellTimeMax: +1
+    clusterTimeLength: 1
+    recalDistToBadChannels: true
+    recalShowerShape: true
+    load1DBadChMap: true
+ClusterExotics:
+    enabled: true
+    createHistos: true
+    fMaxFcross: 0.95
+    fHighEnergyNdiffCut: 50
+    fMinCellEnNdiffCut: 0
+ClusterNonLinearity:
+    enabled: true
+    setForceClusterE: true
+    createHistos: true
+    nonLinFunct: kTestBeamShaper
+ClusterTrackMatcher:
+    enabled: true
+ClusterHadronicCorrection:
+    enabled: false
