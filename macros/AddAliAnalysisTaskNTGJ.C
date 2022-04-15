@@ -2,6 +2,7 @@
 R__ADD_INCLUDE_PATH($ALICE_PHYSICS)
 #include <OADB/COMMON/MULTIPLICITY/macros/AddTaskMultSelection.C>
 #include <PWG/EMCAL/macros/AddTaskEmcalCorrectionTask.C>
+#include <PWG/EMCAL/macros/AddTaskMCTrackSelector.C>
 #include <PWGPP/EMCAL/macros/ConfigureEMCALRecoUtils.C>
 #include <OADB/macros/AddTaskPhysicsSelection.C>
 #include <PWGPP/PilotTrain/AddTaskCDBconnect.C>
@@ -65,6 +66,13 @@ AddAliAnalysisTaskNTGJ(TString name,
       AddTaskMultSelection(kFALSE);
   }
 
+  /*AliEmcalMCTrackSelector *mcPartTask = NULL;
+  if(is_mc){
+    std::cout << "AddTask MC Track Selector " << std::endl;
+    AddTaskMCTrackSelector("mcparticles", kFALSE, kFALSE, -1, kFALSE); //this is needed only in mC
+    }//*/
+  
+  
   if (is_embed) {
 #ifndef __CLING__
     gROOT->LoadMacro("$ALICE_PHYSICS/PWG/EMCAL/"
@@ -146,6 +154,12 @@ AddAliAnalysisTaskNTGJ(TString name,
   // set to 2 to print number of clusters/tracks/MC particles
   // set to 3 to also print when entering various loops
   // AliLog::SetClassDebugLevel("AliAnalysisTaskNTGJ", 2);
+  AliEmcalMCTrackSelector *mcPartTask = NULL;
+  if(is_mc){
+    std::cout << "AddTask MC Track Selector " << std::endl;
+    mcPartTask = AddTaskMCTrackSelector("mcparticles", kFALSE, kFALSE, -1, kFALSE); //this is needed only in mC
+  }//*/
+  
 
   // add cluster, track, and MC containers
   if (is_embed) {
@@ -231,7 +245,13 @@ AddAliAnalysisTaskNTGJ(TString name,
   reco_util->SwitchOnRecalibration();
   reco_util->SwitchOnRunDepCorrection();
   
+  //task->SetUseBuiltinEventSelection(false);
+  //task->SelectCollisionCandidates(AliVEvent::kINT7);
+  //task->SelectCollisionCandidates(AliVEvent::kMuonCalo | AliVEvent::kINT7);
+
   physics_selection = true;
+  physics_selection_pileup_cut = false;
+  physics_selection_mc_analysis = true;
   if (physics_selection) {
 #ifndef __CLING__
     gROOT->LoadMacro("$ALICE_PHYSICS/OADB/macros/"
@@ -244,17 +264,18 @@ AddAliAnalysisTaskNTGJ(TString name,
 
     // trying to reduce the memory
     //task->SelectCollisionCandidates(AliVEvent::kEMCEGA);
-    task->SelectCollisionCandidates(AliVEvent::kINT7);
+    //task->SelectCollisionCandidates(AliVEvent::kINT7);
     //task->SelectCollisionCandidates(AliVEvent::kCaloOnly);
-    //task->SelectCollisionCandidates(AliVEvent::kMuonCalo);
+    task->SelectCollisionCandidates(AliVEvent::kMuonCalo);
     //task->SelectCollisionCandidates(AliVEvent::kAny);
     //task->SelectCollisionCandidates(AliVEvent::kEMCEGA | AliVEvent::kINT7);
-    //task->SelectCollisionCandidates(AliVEvent::kMuonCalo | AliVEvent::kINT7);
+    //task->SelectCollisionCandidates(AliVEvent::kMuonCalo | AliVEvent::kCaloOnly | AliVEvent::kINT7 | AliVEvent::kAny);
     //task->SelectCollisionCandidates(AliVEvent::kEMCEGA | AliVEvent::kINT7 | AliVEvent::kAny);
     //task->SelectCollisionCandidates(AliVEvent::kCaloOnly | AliVEvent::kINT7 | AliVEvent::kAny);
 
-  }
+    }//*/
 
+  //task->SelectCollisionCandidates(AliVEvent::kINT7);
   mgr->AddTask(task);
   mgr->ConnectInput(task, 0, mgr->GetCommonInputContainer());
 

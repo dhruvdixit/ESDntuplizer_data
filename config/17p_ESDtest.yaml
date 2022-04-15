@@ -1,0 +1,17 @@
+gridWorkingDir:			workingdir_17p_ESD_split5_NL
+gridOutputDir:			outputdir_17p_run282342_kINT7_mannualAndGreen_split5_woNL_builtInFlase_noPhySel
+aliPhysicsVersion:		vAN-20201205_ROOT6-1
+package:			fastjet::v3.2.1_1.024-alice3-94
+package:			boost::v1.72.0-alice2-7
+gridDataDir:			/alice/data/2017/LHC17p
+dataPattern:			/muon_calo_pass1/*/AliESDs.root
+runPrefix:			000
+runNumber:			[282342]
+#runNumber:			[282343, 282342, 282341, 282340, 282314, 282313, 282312, 282307, 282306, 282305, 282304, 282303, 282302, 282247, 282230, 282229, 282227, 282224, 282206, 282189, 282147, 282146, 282126, 282123, 282122, 282119, 282118, 282099, 282098, 282078, 282031, 282030, 282025]
+emcalCorrection:		emcal_correction_pp.yaml
+#emcalCorrection:		emcal_correction_nonLin_pp.yaml
+emcalGeometryFilename:		geometry_2015.root
+emcalLocal2MasterFilename:	EMCALlocal2master.root
+splitMaxInputFileNumber:	5.0
+isMC:				false
+isEmbed:			false

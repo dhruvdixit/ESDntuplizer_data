@@ -204,14 +204,15 @@ _alien_plugin(NULL),                                    \
 _metadata_filled(false)
 
 AliAnalysisTaskNTGJ::AliAnalysisTaskNTGJ(const char *name)
-    : AliAnalysisTaskEmcal(name), CLASS_INITIALIZATION
+: AliAnalysisTaskEmcal(name, true), CLASS_INITIALIZATION
 {
-    DefineOutput(1, TTree::Class());
+  SetMakeGeneralHistograms(true);
+  DefineOutput(1, TTree::Class());
 }
 
 AliAnalysisTaskNTGJ::AliAnalysisTaskNTGJ(
     const AliAnalysisTaskNTGJ & x)
-    : AliAnalysisTaskEmcal(), CLASS_INITIALIZATION
+  : AliAnalysisTaskEmcal("AliAnaysisTaskNTGJ", true), CLASS_INITIALIZATION
 {
     _emcal_geometry_filename = x._emcal_geometry_filename;
     _emcal_local2master_filename = x._emcal_local2master_filename;
@@ -228,6 +229,8 @@ AliAnalysisTaskNTGJ::AliAnalysisTaskNTGJ(
     _stored_jet_min_pt_raw = x._stored_jet_min_pt_raw;
     _nrandom_isolation = x._nrandom_isolation;
     _is_embed = x._is_embed;
+
+    SetMakeGeneralHistograms(true);
 }
 
 #undef ntrigger_class
@@ -294,48 +297,51 @@ AliAnalysisTaskNTGJ::~AliAnalysisTaskNTGJ(void)
 
 void AliAnalysisTaskNTGJ::UserCreateOutputObjects(void)
 {
-    AliAnalysisTaskEmcal::UserCreateOutputObjects();
-    fAliEventCuts.SetManualMode(true);
-    fAliEventCuts.fGreenLight = true;
-
-    TFile *file = OpenFile(1);
-
-    if (file != NULL) {
-        file->SetCompressionSettings(ROOT::CompressionSettings(
-                                         ROOT::kZLIB, 9));
-    }
-
-    /////////////////////////////////////////////////////////////////
-
-    _tree_event = new TTree("_tree_event", "");
-
+  AliAnalysisTaskEmcal::UserCreateOutputObjects();
+  fAliEventCuts.fGreenLight = true;
+  fAliEventCuts.SetManualMode(true);
+  //fAliEventCuts.OverrideAutomaticTriggerSelection(AliVEvent::kAny, true);
+  
+  
+  
+  TFile *file = OpenFile(1);
+  
+  if (file != NULL) {
+    file->SetCompressionSettings(ROOT::CompressionSettings(
+							   ROOT::kZLIB, 9));
+  }
+  
+  /////////////////////////////////////////////////////////////////
+  
+  _tree_event = new TTree("_tree_event", "");
+  
 #define BRANCH(b, t)                    \
-    _tree_event->Branch(                \
-#b, &_branch_ ## b, #b "/" #t);
+  _tree_event->Branch(			\
+		      #b, &_branch_ ## b, #b "/" #t);
 #define BRANCH_ARRAY(b, d, t)                   \
-    _tree_event->Branch(                        \
-#b, _branch_ ## b, #b "[" #d "]/" #t);
+  _tree_event->Branch(				\
+		      #b, _branch_ ## b, #b "[" #d "]/" #t);
 #define BRANCH_ARRAY2(b, d, e, t)                       \
-    _tree_event->Branch(                                \
-#b, _branch_ ## b, #b "[" #d "][" #e "]/" #t);
+  _tree_event->Branch(					\
+		      #b, _branch_ ## b, #b "[" #d "][" #e "]/" #t);
 #define BRANCH_STR(b)                           \
-    _tree_event->Branch(                        \
-#b, _branch_ ## b, #b "/C");
+  _tree_event->Branch(				\
+		      #b, _branch_ ## b, #b "/C");
 #define BRANCH_STR_ARRAY(b, d)                  \
-    _tree_event->Branch(                        \
-#b, &_branch_ ## b);
-
-    MEMBER_BRANCH;
-
+  _tree_event->Branch(				\
+		      #b, &_branch_ ## b);
+  
+  MEMBER_BRANCH;
+  
 #undef BRANCH
 #undef BRANCH_ARRAY
 #undef BRANCH_ARRAY2
 #undef BRANCH_STR
 #undef BRANCH_STR_ARRAY
-
-    PostData(1, _tree_event);
-
-    /////////////////////////////////////////////////////////////////
+  
+  PostData(1, _tree_event);
+  
+  /////////////////////////////////////////////////////////////////
 }
 
 #undef MEMBER_BRANCH
@@ -356,14 +362,14 @@ void AliAnalysisTaskNTGJ::UserCreateOutputObjects(void)
 Bool_t AliAnalysisTaskNTGJ::Run()
 {
   AliVEvent *event = NULL;
-    AliESDEvent *esd_event = NULL;
-    AliAODEvent *aod_event = NULL;
-    const AliVVertex *primary_vertex = NULL;
-
-    AliVCaloCells *emcal_cell = NULL;
-    AliClusterContainer *cluster_container = NULL;
-    std::vector<AliTrackContainer*> track_containers;
-    AliMCParticleContainer *mc_container = NULL;
+  AliESDEvent *esd_event = NULL;
+  AliAODEvent *aod_event = NULL;
+  const AliVVertex *primary_vertex = NULL;
+  
+  AliVCaloCells *emcal_cell = NULL;
+  AliClusterContainer *cluster_container = NULL;
+  std::vector<AliTrackContainer*> track_containers;
+  AliMCParticleContainer *mc_container = NULL;
 
     // for some reason, moving loadEmcalGeometry later causes a change in cell_position
     loadEmcalGeometry();
@@ -758,32 +764,36 @@ void AliAnalysisTaskNTGJ::loadPhotonNNModel()
 
 void AliAnalysisTaskNTGJ::loadMC(AliESDEvent *esd_event, AliAODEvent *aod_event)
 {
-    // lines 616-683
-    _branch_eg_signal_process_id = INT_MIN;
-    _branch_eg_mpi = INT_MIN;
-    _branch_eg_pt_hat = NAN;
-    _branch_eg_cross_section = NAN;
-    _branch_eg_weight = NAN;
-    // This should be default to zero to avoid counting mishap
-    _branch_eg_ntrial = 0;
+  AliMCEvent *mc_truth_event = MCEvent();
+  
+  if (mc_truth_event != NULL) {
+    mc_truth_event->PreReadAll();
+  }
+  // lines 616-683
+  _branch_eg_signal_process_id = INT_MIN;
+  _branch_eg_mpi = INT_MIN;
+  _branch_eg_pt_hat = NAN;
+  _branch_eg_cross_section = NAN;
+  _branch_eg_weight = NAN;
+  // This should be default to zero to avoid counting mishap
+  _branch_eg_ntrial = 0;
 
-    _branch_eg_scale_pdf = NAN;
-    _branch_eg_alpha_qcd = NAN;
-    _branch_eg_alpha_qed = NAN;
-    std::fill(_branch_eg_pdf_id,
-              _branch_eg_pdf_id + sizeof(_branch_eg_pdf_id) /
-              sizeof(*_branch_eg_pdf_id), INT_MIN);
-    std::fill(_branch_eg_pdf_x,
-              _branch_eg_pdf_x + sizeof(_branch_eg_pdf_x) /
-              sizeof(*_branch_eg_pdf_x), NAN);
-    std::fill(_branch_eg_pdf_x_pdf,
-              _branch_eg_pdf_x_pdf + sizeof(_branch_eg_pdf_x_pdf) /
-              sizeof(*_branch_eg_pdf_x_pdf), NAN);
-
-    AliGenPythiaEventHeader *mc_truth_pythia_header = NULL;
+  _branch_eg_scale_pdf = NAN;
+  _branch_eg_alpha_qcd = NAN;
+  _branch_eg_alpha_qed = NAN;
+  std::fill(_branch_eg_pdf_id,
+	    _branch_eg_pdf_id + sizeof(_branch_eg_pdf_id) /
+	    sizeof(*_branch_eg_pdf_id), INT_MIN);
+  std::fill(_branch_eg_pdf_x,
+	    _branch_eg_pdf_x + sizeof(_branch_eg_pdf_x) /
+	    sizeof(*_branch_eg_pdf_x), NAN);
+  std::fill(_branch_eg_pdf_x_pdf,
+	    _branch_eg_pdf_x_pdf + sizeof(_branch_eg_pdf_x_pdf) /
+	    sizeof(*_branch_eg_pdf_x_pdf), NAN);
+  
 
     // embedding MC header is done separately for now
-    if (_is_embed) {
+    /*if (_is_embed) {
         mc_truth_pythia_header = AliAnalysisTaskEmcalEmbeddingHelper::GetInstance()->GetPythiaHeader();
     }
     else {
@@ -799,30 +809,35 @@ void AliAnalysisTaskNTGJ::loadMC(AliESDEvent *esd_event, AliAODEvent *aod_event)
                 mc_truth_pythia_header = dynamic_cast<AliGenPythiaEventHeader*>(eventHeaderGen);
             }
         }
-    }
+    }//*/
 
+  AliGenEventHeader *mc_truth_header = mc_truth_event != NULL ?
+    mc_truth_event->GenEventHeader() : NULL;
+
+  if (mc_truth_header != NULL) {
+    _branch_eg_weight = mc_truth_header->EventWeight();
+
+    TArrayF eg_primary_vertex(3);
+    mc_truth_header->PrimaryVertex(eg_primary_vertex);
+    for (Int_t i = 0; i < 3; i++) {
+      _branch_eg_primary_vertex[i] = eg_primary_vertex.At(i);
+    }
+       
+    //AliGenPythiaEventHeader *mc_truth_pythia_header = NULL;
+    AliGenPythiaEventHeader *mc_truth_pythia_header =
+      dynamic_cast<AliGenPythiaEventHeader *>(mc_truth_header);
     if (mc_truth_pythia_header != NULL) {
-        _branch_eg_weight = mc_truth_pythia_header->EventWeight();
-
-        TArrayF eg_primary_vertex(3);
-
-        mc_truth_pythia_header->PrimaryVertex(eg_primary_vertex);
-        for (Int_t i = 0; i < 3; i++) {
-            _branch_eg_primary_vertex[i] = eg_primary_vertex.At(i);
-        }
-
-        _branch_eg_signal_process_id = mc_truth_pythia_header->ProcessType();
-        _branch_eg_mpi = mc_truth_pythia_header->GetNMPI();
-        _branch_eg_pt_hat = mc_truth_pythia_header->GetPtHard();
-
-        _branch_eg_cross_section =  mc_truth_pythia_header->GetXsection();
-
-        // Count ntrial, because the event might get skimmed away
-        // by the ntuplizer
-        _skim_sum_eg_ntrial += mc_truth_pythia_header->Trials();
+      
+      _branch_eg_signal_process_id = mc_truth_pythia_header->ProcessType();
+      _branch_eg_mpi = mc_truth_pythia_header->GetNMPI();
+      _branch_eg_pt_hat = mc_truth_pythia_header->GetPtHard();
+      _branch_eg_cross_section =  mc_truth_pythia_header->GetXsection();
+      // Count ntrial, because the event might get skimmed away
+      // by the ntuplizer
+      _skim_sum_eg_ntrial += mc_truth_pythia_header->Trials();
     }
+  }
 }
-
 void AliAnalysisTaskNTGJ::getBeamProperties(AliVEvent *event,
         AliESDEvent *esd_event,
         AliAODEvent *aod_event,
@@ -1582,7 +1597,7 @@ void AliAnalysisTaskNTGJ::fillClusterBranches(AliVCaloCells *emcal_cell,
     // lines 1701-1830
     //FIXME: change away from single letter variables...
     TLorentzVector p;
-    c->GetMomentum(p, _branch_primary_vertex);
+    c->GetMomentum(p, _branch_primary_vertex, AliVCluster::kNonLinCorr);
 
     _branch_cluster_e[_branch_ncluster] = half(p.E());
     _branch_cluster_pt[_branch_ncluster] = half(p.Pt());
@@ -1951,7 +1966,7 @@ void AliAnalysisTaskNTGJ::getTruthIsolation(AliClusterContainer *cluster_contain
     for (auto cluster : cluster_container->accepted()) {
         AliVCluster *c = cluster;
         TLorentzVector p;
-        c->GetMomentum(p, _branch_primary_vertex);
+        c->GetMomentum(p, _branch_primary_vertex, AliVCluster::kNonLinCorr);
 
         // remake cluster_mc_truth_index here for each cluster
         // rather than pass around a vector of sets (one set per cluster)
@@ -2341,7 +2356,7 @@ void AliAnalysisTaskNTGJ::getVoronoiAreaCluster(
     for (auto c : cluster_container->accepted()) {
         if (cell_pass_basic_quality[icluster]) {
             TLorentzVector p;
-            c->GetMomentum(p, _branch_primary_vertex);
+            c->GetMomentum(p, _branch_primary_vertex, AliVCluster::kNonLinCorr);
 
             const fastjet::PseudoJet
             pj(p.Px(), p.Py(), p.Pz(), p.P());
@@ -2493,7 +2508,7 @@ void AliAnalysisTaskNTGJ::getIsolationTpc(
     for (auto cluster : cluster_container->accepted()) {
         AliVCluster *c = cluster;
         TLorentzVector p;
-        c->GetMomentum(p, _branch_primary_vertex);
+        c->GetMomentum(p, _branch_primary_vertex, AliVCluster::kNonLinCorr);
 
         double cluster_iso_tpc_01 = 0;
         double cluster_iso_tpc_02 = 0;
@@ -2632,7 +2647,7 @@ void AliAnalysisTaskNTGJ::getIsolationIts(
     for (auto cluster : cluster_container->accepted()) {
         AliVCluster *c = cluster;
         TLorentzVector p;
-        c->GetMomentum(p, _branch_primary_vertex);
+        c->GetMomentum(p, _branch_primary_vertex, AliVCluster::kNonLinCorr);
 
         double cluster_iso_its_01 = 0;
         double cluster_iso_its_02 = 0;
@@ -2771,7 +2786,7 @@ void AliAnalysisTaskNTGJ::getIsolationCluster(
     for (auto cluster : cluster_container->accepted()) {
         AliVCluster *c = cluster;
         TLorentzVector p;
-        c->GetMomentum(p, _branch_primary_vertex);
+        c->GetMomentum(p, _branch_primary_vertex, AliVCluster::kNonLinCorr);
 
         double cluster_iso_cluster_01 = 0;
         double cluster_iso_cluster_02 = 0;
@@ -2789,7 +2804,7 @@ void AliAnalysisTaskNTGJ::getIsolationCluster(
             }
 
             TLorentzVector p1;
-            c->GetMomentum(p1, _branch_primary_vertex);
+            c->GetMomentum(p1, _branch_primary_vertex, AliVCluster::kNonLinCorr);
 
             const double dpseudorapidity = p1.Eta() - p.Eta();
             const double dazimuth = angular_range_reduce(
@@ -2886,7 +2901,7 @@ void AliAnalysisTaskNTGJ::getJetsTpc(
     for (auto c : cluster_container->accepted()) {
         if (cell_pass_basic_quality[icluster]) {
             TLorentzVector p;
-            c->GetMomentum(p, _branch_primary_vertex);
+            c->GetMomentum(p, _branch_primary_vertex, AliVCluster::kNonLinCorr);
 
             const fastjet::PseudoJet
             pj(p.Px(), p.Py(), p.Pz(), p.P());
@@ -2957,7 +2972,7 @@ void AliAnalysisTaskNTGJ::getJetsIts(
     for (auto c : cluster_container->accepted()) {
         if (cell_pass_basic_quality[icluster]) {
             TLorentzVector p;
-            c->GetMomentum(p, _branch_primary_vertex);
+            c->GetMomentum(p, _branch_primary_vertex, AliVCluster::kNonLinCorr);
 
             const fastjet::PseudoJet
             pj(p.Px(), p.Py(), p.Pz(), p.P());

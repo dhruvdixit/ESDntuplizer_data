@@ -142,7 +142,7 @@ void runNTGJ(const char *config_filename = "config/18q.yaml",
 
     //gROOT->ProcessLine(".x $ALICE_ROOT/ANALYSIS/macros/train/AddAODHandler.C");
     gROOT->ProcessLine(".x $ALICE_ROOT/ANALYSIS/macros/train/AddESDHandler.C");
-   // gROOT->ProcessLine(".x $ALICE_ROOT/ANALYSIS/macros/train/AddMCHandler.C");
+    //gROOT->ProcessLine(".x $ALICE_ROOT/ANALYSIS/macros/train/AddMCHandler.C");
 
     AliAnalysisAlien *plugin = new AliAnalysisAlien("pluginNTGJ");
 

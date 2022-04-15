@@ -1,0 +1,17 @@
+gridWorkingDir:			workingdir_18g7a_pthat1_3runs
+gridOutputDir:			outputdir_18g7a_pthat1_3runs_wNL_GeMomentumFixed
+aliPhysicsVersion:		vAN-20201205_ROOT6-1
+package:			fastjet::v3.2.1_1.024-alice3-94
+package:			boost::v1.72.0-alice2-7
+gridDataDir:			/alice/sim/2018/LHC18g7a_calo/1
+dataPattern:			*/AliESDs.root
+runPrefix:			
+runNumber:			[282441, 282440, 282439]
+#runNumber:			[282441, 282440, 282439, 282437, 282415, 282411, 282402, 282399, 282398, 282393, 282392, 282391, 282343, 282342, 282341, 282340, 282314, 282313, 282212, 282307, 282306, 282305, 282304, 282303, 282302, 282247, 282230, 282229, 282227, 282224, 282206, 282189, 282147, 282146, 282127, 282126, 282125, 282123, 282122, 282119, 282118, 282099, 282098, 282078,, 282051, 282031, 282025]
+emcalCorrection:		emcal_correctionMC_nonlin.yaml
+#emcalCorrection:		emcal_correction_MC.yaml
+emcalGeometryFilename:		geometry_2015.root
+emcalLocal2MasterFilename:	EMCALlocal2master.root
+splitMaxInputFileNumber:	10.0
+isMC:				true
+isEmbed:			false
