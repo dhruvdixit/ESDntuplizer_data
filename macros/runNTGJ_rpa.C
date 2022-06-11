@@ -8,7 +8,7 @@ root=root; exec $root -l -b -q "$0($(join_by \",\" \"$*\" | \
 #include <TROOT.h>
 #include <TSystem.h>
 
-void runNTGJ(const char *config_filename = "config/18q.yaml",
+void runNTGJ_rpa(const char *config_filename = "config/18q.yaml",
              const char *run_mode = "test",
              const char *local_file_list = "pbpb-filelist-18q.txt")
 {
@@ -142,7 +142,7 @@ void runNTGJ(const char *config_filename = "config/18q.yaml",
     gSystem->Load("libfastjetplugins");
     gSystem->Load("libfastjetcontribfragile");
 
-    gROOT->ProcessLine(".L AliAnalysisTaskNTGJ.cxx+g");
+    gROOT->ProcessLine(".L AliAnalysisTaskNTGJ_rpa.cxx+g");
 
     cout << __FILE__ << "\t" << __LINE__ << endl;
 
@@ -417,8 +417,8 @@ void runNTGJ(const char *config_filename = "config/18q.yaml",
         oadb_filename += " ";
     }
     plugin->SetAdditionalLibs(
-        "AliAnalysisTaskNTGJ.h "
-        "AliAnalysisTaskNTGJ.cxx "
+        "AliAnalysisTaskNTGJ_rpa.h "
+        "AliAnalysisTaskNTGJ_rpa.cxx "
         "cgal_4_9.h " +
         oadb_filename + " " +
         "special_function.h mc_truth.h "
@@ -437,7 +437,7 @@ void runNTGJ(const char *config_filename = "config/18q.yaml",
         "libfastjetcontribfragile.so " +
         mkl_filename + " " + efp7_filename + " " +
         emcal_correction_filename);
-    plugin->SetAnalysisSource("AliAnalysisTaskNTGJ.cxx");
+    plugin->SetAnalysisSource("AliAnalysisTaskNTGJ_rpa.cxx");
 
     cout << __FILE__ << "\t" << __LINE__ << endl;
 
@@ -461,8 +461,8 @@ void runNTGJ(const char *config_filename = "config/18q.yaml",
 
     cout << __FILE__ << "\t" << __LINE__ << endl;
 
-    TString add_task_line = ".x macros/AddAliAnalysisTaskNTGJ.C("
-        "\"AliAnalysisTaskNTGJ\",\"";
+    TString add_task_line = ".x macros/AddAliAnalysisTaskNTGJ_rpa.C("
+        "\"AliAnalysisTaskNTGJ_rpa\",\"";
 
     add_task_line += emcal_correction_filename + "\"," +
         (mult_selection ? "true" : "false") + "," +

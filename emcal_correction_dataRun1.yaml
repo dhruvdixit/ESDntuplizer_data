@@ -1,0 +1,49 @@
+pass: "pass4"
+inputObjects:
+    clusterContainers:
+        defaultClusterContainer:
+            branchName: "usedefault"
+sharedParameters:
+    enableMCGenRemovTrack: false
+
+CellEnergy:                                         # Cell Energy correction component
+    createHistos: true
+    enabled: true                                   # Whether to enable the task
+    enableShaperCorrection: true                    # ADDED !!
+    enableLGDetermination: true
+
+CellBadChannel:                                     # Bad channel removal at the cell level component
+    enabled: true                                   # Whether to enable the task
+    load1DBadChMap: true
+
+CellTimeCalib:                                      # Cell Time Calibration component
+    enabled: true                                   # Whether to enable the task
+    createHistos: true                              # ADDED !!
+    doCalibrateLowGain: true                        # ADDED !!
+    doMergedBCs: true                               # ADDED !!
+    doCalibMergedLG: false                          # ADDED !!
+
+Clusterizer:                                     # same settings as "Clusterizer"
+    enabled: true
+    clusterizer: kClusterizerv1
+    cellTimeMin: -500e-9
+    cellTimeMax: +500e-9
+    cellE: 0.1                                      # Minimum cell energy CHANGED!!
+    seedE: 0.5                                      # Seed energy threshold
+    clusterTimeLength: 1e6
+    recalDistToBadChannels: true
+
+ClusterNonLinearity:                             # Cluster non-linearity correction
+    enabled: true                                
+    setForceClusterE: true                  
+    createHistos: true                        
+    nonLinFunct: kTestBeamShaper 
+
+ClusterTrackMatcher:                             # Cluster-track matcher component
+    enabled: false                                  # Whether to enable the task
+
+ClusterHadronicCorrection:                       # Cluster hadronic correction component
+    enabled: false
+
+ClusterExotics:                                  # Cluster exotics identification component (actual removal is handled by the cluster container)
+    enabled: true

@@ -8,8 +8,8 @@ R__ADD_INCLUDE_PATH($ALICE_PHYSICS)
 #include <PWG/EMCAL/macros/AddTaskEmcalEmbeddingHelper.C>
 #endif // __CLING__
 
-AliAnalysisTaskNTGJ *
-AddAliAnalysisTaskNTGJ(TString name,
+AliAnalysisTaskNTGJ_rpa *
+AddAliAnalysisTaskNTGJ_rpa(TString name,
                        TString emcal_correction_filename,
                        bool mult_selection,
                        bool physics_selection,
@@ -150,13 +150,13 @@ AddAliAnalysisTaskNTGJ(TString name,
 
   cout << __FILE__ << "\t" << __LINE__ << endl;
 
-  AliAnalysisTaskNTGJ *task = new AliAnalysisTaskNTGJ(name.Data());
+  AliAnalysisTaskNTGJ_rpa *task = new AliAnalysisTaskNTGJ_rpa(name.Data());
 
   cout << __FILE__ << "\t" << __LINE__ << endl;
 
   // set to 2 to print number of clusters/tracks/MC particles
   // set to 3 to also print when entering various loops
-  // AliLog::SetClassDebugLevel("AliAnalysisTaskNTGJ", 2);
+  // AliLog::SetClassDebugLevel("AliAnalysisTaskNTGJ_rpa", 2);
 
   // add cluster, track, and MC containers
   if (is_embed) {
@@ -285,7 +285,7 @@ AddAliAnalysisTaskNTGJ(TString name,
 
   TString filename = mgr->GetCommonFileName();
 
-  filename += ":AliAnalysisTaskNTGJ";
+  filename += ":AliAnalysisTaskNTGJ_rpa";
 
   mgr->ConnectOutput(task, 1,
                      mgr->CreateContainer("tree", TTree::Class(),
