@@ -269,10 +269,19 @@ AddAliAnalysisTaskNTGJ_rpa(TString name,
     //task->SelectCollisionCandidates(AliVEvent::kCaloOnly);
     //task->SelectCollisionCandidates(AliVEvent::kMuonCalo);
     //task->SelectCollisionCandidates(AliVEvent::kAny);
+    
+
+
+    //pPb triggers
     task->SelectCollisionCandidates(AliVEvent::kEMCEGA | AliVEvent::kINT7);
-    //task->SelectCollisionCandidates(AliVEvent::kMuonCalo | AliVEvent::kINT7);
     //task->SelectCollisionCandidates(AliVEvent::kEMCEGA | AliVEvent::kINT7 | AliVEvent::kAny);
+
+    //pp triggers
+    //task->SelectCollisionCandidates(AliVEvent::kMuonCalo | AliVEvent::kINT7);
+    //task->SelectCollisionCandidates(AliVEvent::kMuonCalo | AliVEvent::kCaloOnly | AliVEvent::kINT7);
     //task->SelectCollisionCandidates(AliVEvent::kCaloOnly | AliVEvent::kINT7 | AliVEvent::kAny);
+    //task->SelectCollisionCandidates(AliVEvent::kMuonCalo | AliVEvent::kCaloOnly | AliVEvent::kINT7 | AliVEvent::kAny);
+
 
   }
 
